@@ -1,0 +1,38 @@
+requests
+python-dotenv
+google-generativeai
+openai
+groq
+mistralai
+SpeechRecognition
+pyttsx3
+pyaudio
+sounddevice
+faster-whisper
+numpy
+scipy
+ddgs
+edge-tts
+playsound
+websockets
+
+# Vision capabilities
+pytesseract
+Pillow
+mss
+opencv-python
+pyautogui
+
+# Enhanced features
+pydantic
+rich
+
+# === Advanced Architecture ===
+# API Server
+fastapi
+uvicorn[standard]
+
+# Vector Database
+chromadb
+sentence-transformers
+

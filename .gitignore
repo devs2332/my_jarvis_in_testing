@@ -1,0 +1,80 @@
+# ──────────────────────────────────────
+# .gitignore — Jarvis AI
+# ──────────────────────────────────────
+
+# ===== Environment & Secrets =====
+.env
+*.env
+!.env.example
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ===== Virtual Environments =====
+venv/
+ENV/
+env/
+.venv/
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== Node / Frontend =====
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ===== Data & Runtime =====
+data/memory.json
+data/conversation.log
+data/user_profile.json
+data/vector_db/
+memory.json
+
+# ===== Audio / Media =====
+*.mp3
+*.wav
+tts_*.mp3
+
+# ===== Logs =====
+logs/
+*.log
+
+# ===== Test Outputs =====
+test_output/
+test_output.txt
+screenshots/
+
+# ===== ML Models =====
+models/
+*.pth
+*.bin
+*.onnx
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
