@@ -66,6 +66,9 @@ logs/
 # ===== Test Outputs =====
 test_output/
 test_output.txt
+error_output.txt
+full_output.txt
+frontend/build_log*.txt
 screenshots/
 
 # ===== ML Models =====

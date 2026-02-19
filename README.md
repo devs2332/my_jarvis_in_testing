@@ -27,7 +27,7 @@
 | ⚡ **Streaming Responses** | Token-by-token LLM streaming via WebSocket |
 | 🎨 **React Dashboard** | Modern dark-themed UI with chat, knowledge base & system status |
 | 🌐 **FastAPI Backend** | REST + WebSocket API with full CORS support |
-| 🎤 **Voice Interface** | Wake word detection → STT (Whisper) → TTS pipeline |
+| 🎤 **Voice Interface** | Continuous listening (VAD) → STT (Groq/Whisper/SpeechBrain) → TTS pipeline |
 | 💬 **Multi-LLM Support** | Groq, OpenAI, Mistral — switch with one config change |
 | 🔍 **Web Search** | DuckDuckGo integration for real-time information |
 | 🛠️ **Tool System** | Extensible registry for browser, file, and system tools |
@@ -185,6 +185,7 @@ All settings in `config.py`:
 | `VECTOR_DB_DIR` | `data/vector_db` | ChromaDB persist directory |
 | `SERVER_PORT` | `8080` | FastAPI server port |
 | `MEMORY_FILE` | `memory.json` | JSON memory file path |
+| `STT_ENGINE` | `local` | Speech Engine (`local`, `groq`, `speechbrain`) |
 
 ## 🐛 Troubleshooting
 
