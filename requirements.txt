@@ -12,6 +12,8 @@ faster-whisper
 numpy
 scipy
 ddgs
+transformers
+speechbrain
 edge-tts
 playsound
 websockets

@@ -40,25 +40,12 @@ class Brain:
         self.reasoning = ReasoningEngine()
         logger.info("🧠 Brain initialized (vector_memory=%s)", "ON" if vector_memory else "OFF")
 
-    def think(self, user_query):
+    def think(self, user_query, research_mode=False, fast_mode=False, language="English", provider=None, model=None):
         """
         Process a user query using RAG pipeline.
-
-        Steps:
-        1. Search vector memory for relevant past context
-        2. Search the internet for relevant information
-        3. Build a reasoning prompt with all context
-        4. Generate response using LLM
-        5. Store Q&A in vector memory
-
-        Args:
-            user_query (str): The user's question or request
-
-        Returns:
-            str: Generated answer from the LLM
         """
         try:
-            logger.info(f"🤔 Thinking about: '{user_query[:50]}...'")
+            logger.info(f"🤔 Thinking about: '{user_query[:50]}...' (FastMode: {fast_mode})")
 
             # 1️⃣ Vector memory search (RAG retrieval)
             memory_context = []
@@ -67,16 +54,57 @@ class Brain:
                 logger.debug(f"Retrieved {len(memory_context)} memory results")
 
             # 2️⃣ Internet search
-            search_results = self.search.search(user_query)
+            # Check for "deep research" intent (e.g. "top 10", "detailed report")
+            max_results = 5
+            deep_research = False
+            
+            if fast_mode:
+                max_results = 1
+                deep_research = True  # FastMode always scrapes the top result
+            
+            elif "top" in user_query.lower() and any(c.isdigit() for c in user_query):
+                import re
+                match = re.search(r"top\s+(\d+)", user_query.lower())
+                if match:
+                    max_results = int(match.group(1))
+                    deep_research = True
+            
+            elif "research" in user_query.lower() or "collect data" in user_query.lower() or research_mode:
+                max_results = 10
+                deep_research = True
+
+            search_results = self.search.search(user_query, max_results=max_results)
             logger.debug(f"Retrieved {len(search_results)} search results")
+            
+            # Deep Research: Scrape top results if needed
+            if deep_research and search_results:
+                from tools.browser import scrape_url
+                logger.info("🕵️‍♂️ Deep Research activated: Scraping top results...")
+                
+                scraped_count = 0
+                for result in search_results[:3]: # Scrape top 3 to avoid taking too long
+                    try:
+                        url = result.get('href', '')
+                        if not url: continue
+                        
+                        content = scrape_url(url)
+                        if len(content) > 500:
+                            result['body'] += f"\n\n[FULL CONTENT]:\n{content[:2000]}..." # Append first 2k chars
+                            scraped_count += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to scrape {url}: {e}")
+                
+                logger.info(f"✅ Scraped {scraped_count} pages for deep context")
 
             # 3️⃣ Build reasoning prompt with all context
             prompt = self.reasoning.build_prompt(
-                user_query, search_results, memory_context=memory_context
+                user_query, search_results, memory_context=memory_context, fast_mode=fast_mode, language=language
             )
 
+            # Removed strict formatting rules to allow natural conversation
+
             # 4️⃣ Ask LLM
-            answer = self.llm.generate(prompt)
+            answer = self.llm.generate(prompt, provider=provider, model=model)
             logger.info(f"✅ Generated answer ({len(answer)} chars)")
 
             # 5️⃣ Save to both memory systems

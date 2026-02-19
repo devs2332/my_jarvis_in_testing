@@ -7,12 +7,45 @@ import scipy.io.wavfile as wav
 import os
 import re
 import time
-
+from groq import Groq
+from config import STT_ENGINE
 
 class Listener:
     def __init__(self):
-        print("🎧 Loading Whisper (accurate mode)...")
+        print("🎧 Initializing Speech Recognition...")
+        
+        # 1. Setup Groq
+        self.groq_client = None
+        if STT_ENGINE == "groq":
+            api_key = os.getenv("GROQ_API_KEY")
+            if api_key:
+                try:
+                    self.groq_client = Groq(api_key=api_key)
+                    print("✅ Groq Whisper API ready (Primary).")
+                except Exception as e:
+                    print(f"⚠️ Groq Init Failed: {e}")
+            else:
+                print("⚠️ No GROQ_API_KEY found.")
 
+        # 2. Setup SpeechBrain (If selected)
+        self.sb_model = None
+        if STT_ENGINE == "speechbrain":
+            print("🎧 Loading SpeechBrain (might download model on first run)...")
+            try:
+                from speechbrain.inference.ASR import EncoderDecoderASR
+                self.sb_model = EncoderDecoderASR.from_hparams(
+                    source="speechbrain/asr-crdnn-rnnlm-librispeech", 
+                    savedir="pretrained_models/speechbrain-crdnn-rnnlm-librispeech",
+                    run_opts={"device": "cpu"} # Force CPU to avoid CUDA version mismatch crashes
+                )
+                print("✅ SpeechBrain ready (Primary).")
+            except Exception as e:
+                print(f"⚠️ SpeechBrain Init Failed: {e}. Falling back to default.")
+
+        # 3. Setup Local Faster-Whisper (Always load as reliable core)
+        if not self.groq_client and not self.sb_model: # Only print if it's the active fallback
+             print(f"🎧 Loading Local Whisper (Engine: {STT_ENGINE})...")
+        
         # Auto-detect microphone
         try:
             default_device = sd.query_devices(kind='input')
@@ -26,22 +59,26 @@ class Listener:
         device_info = sd.query_devices(MIC_DEVICE_INDEX)
         self.sample_rate = int(device_info["default_samplerate"])
         self.device_index = MIC_DEVICE_INDEX
-
         print(f"🎤 Using mic: {device_info['name']}")
 
         self.model = WhisperModel(
-            "small",        # 🔥 better accuracy than base
+            "small",        # Balanced Open Source Model
             device="cpu",
             compute_type="int8"
         )
+        print("✅ Local Whisper ready.")
 
-        print("✅ Whisper ready.")
-
-    def listen(self):
-        print("🎙️ Speak now...")
-
+    def listen(self, timeout=None):
+        """
+        Records audio and transcribes it.
+        Return: transcribed text (str) or ""
+        """
+        print("🎙️ Listening...")
+        
+        # Record audio
+        duration = 5 # default seconds
         audio = sd.rec(
-            int(4 * self.sample_rate),   # longer window
+            int(duration * self.sample_rate),
             samplerate=self.sample_rate,
             channels=1,
             dtype="int16",
@@ -49,83 +86,67 @@ class Listener:
         )
         sd.wait()
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-            wav.write(f.name, self.sample_rate, audio)
-            filename = f.name
+        # Check if audio is silent (basic VAD)
+        # simplistic energy check
+        rms = np.sqrt(np.mean(audio**2))
+        if rms < 100: # Threshold for silence requires tuning
+            # print("Silence detected.")
+            return ""
 
-        segments, info = self.model.transcribe(
-            filename,
-            language=None,        # AUTO: Hindi + English
-            beam_size=3,
-            vad_filter=True,
-            temperature=0.3
-        )
-
-        os.remove(filename)
-
-        text = " ".join(seg.text for seg in segments).strip()
-        return self._normalize(text)
-
-    def listen_command(self, seconds=4):
-        # Silent listening for wake word or commands
-        audio = sd.rec(
-            int(seconds * self.sample_rate),
-            samplerate=self.sample_rate,
-            channels=1,
-            dtype="int16",
-            device=self.device_index
-        )
-        sd.wait()
-
+        # Save to temp file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
             wav.write(f.name, self.sample_rate, audio)
             filename = f.name
 
         try:
-            segments, info = self.model.transcribe(
-                filename,
-                language="en",
-                beam_size=3,
-                vad_filter=True,
-                temperature=0.3
-            )
-            text = " ".join(seg.text for seg in segments).strip()
-            os.remove(filename)
+            text = self._transcribe(filename)
             return self._normalize(text)
-        except Exception as e:
-            print(f"⚠️ STT Error: {e}")
+        finally:
             if os.path.exists(filename):
                 os.remove(filename)
-            return ""
+
+    def _transcribe(self, filename):
+        """Use Groq, SpeechBrain, or Local Whisper based on config."""
+        
+        # 1. Try Groq
+        if STT_ENGINE == "groq" and self.groq_client:
+            try:
+                with open(filename, "rb") as file:
+                    transcription = self.groq_client.audio.transcriptions.create(
+                        file=(filename, file.read()),
+                        model="whisper-large-v3",
+                        response_format="text",
+                        language="en", 
+                        temperature=0.0
+                    )
+                return transcription
+            except Exception as e:
+                print(f"⚠️ Groq STT Failed: {e}. Switching to local.")
+
+        # 2. Try SpeechBrain
+        if STT_ENGINE == "speechbrain" and self.sb_model:
+            try:
+                # SpeechBrain ASR transcription
+                transcription = self.sb_model.transcribe_file(filename)
+                return transcription
+            except Exception as e:
+                print(f"⚠️ SpeechBrain STT Failed: {e}. Switching to local.")
+
+        # 3. Local Faster-Whisper (Default / Fallback)
+        segments, info = self.model.transcribe(
+            filename,
+            beam_size=5,
+            vad_filter=True
+        )
+        return " ".join(seg.text for seg in segments).strip()
 
     def _normalize(self, text):
+        if not text: return ""
         text = text.lower().strip()
-
-        fillers = [
-            "haan", "han", "hmm", "uh", "um",
-            "achha", "accha", "please", "plz"
-        ]
-
-        for f in fillers:
-            text = text.replace(f, "")
-
-        replacements = {
-            "kya hota hai": "",
-            "kya hai": "",
-            "batao": "",
-            "samjhao": "",
-            "samjha do": "",
-            "explain karo": "explain",
-            "you know what i mean": "",
-            "you know what i mean?": "",
-            "i'm feeling a little bit of a": "",
-            "thank you": "",
-            "tk you": "",
-            }
-
-        for k, v in replacements.items():
-            text = text.replace(k, v)
+        
+        # Remove hallucinations / common whisper failures
+        if text in ["you", "thank you", "bye", "watching"]:
+            return ""
 
         text = re.sub(r"\s+", " ", text).strip()
         return text
-

@@ -22,7 +22,7 @@ class ReasoningEngine:
         """Initialize the reasoning engine."""
         logger.info("Reasoning engine initialized")
 
-    def build_prompt(self, user_query, search_results, memory_context=None):
+    def build_prompt(self, user_query, search_results, memory_context=None, fast_mode=False, language="English"):
         """
         Build a structured reasoning prompt from query, search results, and memory.
 
@@ -30,6 +30,7 @@ class ReasoningEngine:
             user_query (str): The user's question or request
             search_results (list): Search result dicts with 'title' and 'body'
             memory_context (list): Optional vector memory results with 'text' key
+            fast_mode (bool): Whether to enforce concise answer for FastMode
 
         Returns:
             str: Formatted prompt for the LLM
@@ -74,11 +75,30 @@ Internet Search Results:
 
 TASK:
 - Consider the past conversation context if relevant
-- Analyze the search information
-- Reason step by step internally
-- Give a clear, concise, and helpful final answer
-- If needed, explain in Hinglish or Hindi
+- Analyze the search information"""
 
+        if fast_mode:
+            prompt += """
+- Provide a very CONCISE and direct answer
+- Do not use filler words
+- Focus on the key facts from the search result"""
+        else:
+            prompt += """
+- Give a clear, concise, and helpful final answer.
+- Avoid unnecessary "Analysis" or "Step-by-step" breakdown unless asked."""
+
+        if language and language.lower() == "hindi":
+            prompt += """
+- ANSWER IN PURE HINDI (Devanagari script).
+- Do not use mixed Hinglish.
+- Use technical terms in English if needed, but explain in Hindi.
+"""
+        else:
+            prompt += """
+- Answer in standard English.
+"""
+
+        prompt += """
 FINAL ANSWER:
 """
 

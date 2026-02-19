@@ -9,20 +9,25 @@ load_dotenv(BASE_DIR / ".env")
 ASSISTANT_NAME = "JARVIS"
 
 # ===== LLM PROVIDER CONFIG =====
-# Options: "google", "groq", "mistral", "openrouter", "openai"
-LLM_PROVIDER = "groq"   # 👈 switch here
+# Options: "google", "groq", "mistral", "openrouter", "openai", "nvidia"
+LLM_PROVIDER = "groq"
+
+# Options: "local" (Faster-Whisper), "speechbrain", "groq" (Cloud)
+STT_ENGINE = "speechbrain"
 
 MODEL_GOOGLE = "gemini-1.5-flash"
 MODEL_GROQ = "llama-3.1-8b-instant"
 MODEL_MISTRAL = "mistral-large-latest"
 MODEL_OPENROUTER = "mistralai/mistral-7b-instruct"
 MODEL_OPENAI = "gpt-4o-mini"   # fast + cheap
+MODEL_NVIDIA = "moonshotai/kimi-k2.5"
 
 def get_google_api_key(): return os.getenv("GOOGLE_API_KEY")
 def get_groq_api_key(): return os.getenv("GROQ_API_KEY")
 def get_mistral_api_key(): return os.getenv("MISTRAL_API_KEY")
 def get_openrouter_api_key(): return os.getenv("OPENROUTER_API_KEY")
 def get_openai_api_key(): return os.getenv("OPENAI_API_KEY")
+def get_nvidia_api_key(): return os.getenv("NVIDIA_API_KEY")
 
 MEMORY_FILE = "memory.json"
 AUTONOMOUS_MODE = "OFF"

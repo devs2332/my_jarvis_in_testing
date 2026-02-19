@@ -9,11 +9,9 @@ This package contains voice processing components:
 
 from voice.stt import Listener
 from voice.tts import Speaker
-from voice.wake_word import WakeWordDetector, WAKE_WORD
+
 
 __all__ = [
     'Listener',
     'Speaker',
-    'WakeWordDetector',
-    'WAKE_WORD',
 ]

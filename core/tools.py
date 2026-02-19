@@ -38,6 +38,18 @@ class ToolRegistry:
             "Search Google for a query",
             {"query": "Search query"}
         )
+        self.register_tool(
+            "browser.get_search_results",
+            browser.get_search_results,
+            "Get raw search results",
+            {"query": "Search query", "max_results": "Number of results (default: 5)"}
+        )
+        self.register_tool(
+            "browser.scrape_url",
+            browser.scrape_url,
+            "Scrape text from a URL",
+            {"url": "URL to scrape"}
+        )
         
         # File tools
         self.register_tool(

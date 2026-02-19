@@ -41,7 +41,10 @@ class VectorMemory:
 
         os.makedirs(persist_dir, exist_ok=True)
 
-        self.client = chromadb.PersistentClient(path=persist_dir)
+        self.client = chromadb.PersistentClient(
+            path=persist_dir,
+            settings=Settings(anonymized_telemetry=False)
+        )
 
         # Use ChromaDB's default embedding function (all-MiniLM-L6-v2)
         self.collection = self.client.get_or_create_collection(

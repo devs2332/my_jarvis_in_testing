@@ -23,6 +23,11 @@ _vector_memory = None
 class ChatRequest(BaseModel):
     message: str
     stream: bool = False
+    research_mode: bool = False
+    fast_mode: bool = False
+    language: str = "English"
+    provider: Optional[str] = None
+    model: Optional[str] = None
 
 
 class MemorySearchRequest(BaseModel):
@@ -81,14 +86,13 @@ async def get_status():
 
 
 # ─── Chat ───
-
 @router.post("/api/chat")
 async def chat(req: ChatRequest):
     if not _agent:
         return {"error": "Agent not initialized"}
 
     start = time.time()
-    response = _agent.run(req.message)
+    response = _agent.run(req.message, research_mode=req.research_mode, fast_mode=req.fast_mode, language=req.language, provider=req.provider, model=req.model)
     elapsed = round(time.time() - start, 2)
 
     # Store in vector memory
@@ -98,23 +102,28 @@ async def chat(req: ChatRequest):
     return {
         "message": req.message,
         "response": response,
+        "research_mode": req.research_mode,
         "elapsed_seconds": elapsed,
         "timestamp": time.time(),
     }
 
-
-# ─── WebSocket Chat (streaming) ───
+# ...
 
 @router.websocket("/ws/chat")
 async def ws_chat(websocket: WebSocket):
     await websocket.accept()
-    logger.info("🔌 WebSocket client connected")
+    logger.info("🔌 WebSocket client connected (Chat)")
 
     try:
         while True:
             data = await websocket.receive_text()
             msg = json.loads(data)
             user_message = msg.get("message", "")
+            research_mode = msg.get("research_mode", False)
+            fast_mode = msg.get("fast_mode", False)
+            language = msg.get("language", "English")
+            provider = msg.get("provider", None)
+            model = msg.get("model", None)
 
             if not user_message:
                 await websocket.send_json({"type": "error", "text": "Empty message"})
@@ -125,7 +134,7 @@ async def ws_chat(websocket: WebSocket):
             # Try streaming if agent supports it
             if hasattr(_agent, "run_stream"):
                 full_response = ""
-                async for token in _agent.run_stream(user_message):
+                async for token in _agent.run_stream(user_message, research_mode=research_mode, fast_mode=fast_mode, language=language, provider=provider, model=model):
                     full_response += token
                     await websocket.send_json({"type": "token", "text": token})
 
@@ -136,7 +145,7 @@ async def ws_chat(websocket: WebSocket):
                 })
             else:
                 # Fallback: non-streaming
-                response = _agent.run(user_message)
+                response = _agent.run(user_message, research_mode=research_mode, fast_mode=fast_mode, language=language, provider=provider, model=model)
                 await websocket.send_json({
                     "type": "complete",
                     "text": response,
@@ -151,9 +160,45 @@ async def ws_chat(websocket: WebSocket):
                 )
 
     except WebSocketDisconnect:
-        logger.info("🔌 WebSocket client disconnected")
+        logger.info("🔌 WebSocket client disconnected (Chat)")
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
+
+
+@router.websocket("/ws")
+async def ws_status(websocket: WebSocket):
+    await websocket.accept()
+    logger.info("🔌 WebSocket client connected (Status)")
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            msg = json.loads(data)
+            
+            if msg.get("type") == "get_status":
+                from config import LLM_PROVIDER
+                vm_stats = _vector_memory.get_stats() if _vector_memory else {}
+                
+                status_payload = {
+                    "type": "status_update",
+                    "payload": {
+                        "llm_provider": LLM_PROVIDER,
+                        "vector_memory": vm_stats,
+                        "timestamp": time.time(),
+                        "connected": True
+                    }
+                }
+                await websocket.send_json(status_payload)
+            else:
+                # Keep alive / ping
+                await websocket.send_json({"type": "pong", "timestamp": time.time()})
+
+            # Optional: could push periodic updates here if we wanted
+            
+    except WebSocketDisconnect:
+        logger.info("🔌 WebSocket client disconnected (Status)")
+    except Exception as e:
+        logger.error(f"Status WebSocket error: {e}")
 
 
 # ─── Memory / Knowledge Base ───
@@ -192,30 +237,80 @@ async def memory_stats():
     return _vector_memory.get_stats()
 
 
-# ─── Conversations (from JSON memory) ───
+# ─── History & Trash (JSON Memory) ───
 
-@router.get("/api/conversations")
-async def get_conversations():
+@router.get("/api/history")
+async def get_history(limit: int = 50):
     try:
         from core.memory import Memory
         mem = Memory()
-        history = mem.data.get("history", [])
-        return {
-            "conversations": history[-50:],  # last 50
-            "total": len(history),
-        }
+        history = mem.get_history(limit=limit)
+        return {"conversations": history}
     except Exception as e:
         return {"conversations": [], "error": str(e)}
 
+@router.delete("/api/history/{item_id}")
+async def delete_history_item(item_id: str):
+    try:
+        from core.memory import Memory
+        mem = Memory()
+        success = mem.move_to_trash(item_id)
+        if success:
+            return {"status": "success", "message": "Moved to trash"}
+        return {"status": "error", "message": "Item not found"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
-# ─── Facts (key-value memory) ───
+@router.get("/api/trash")
+async def get_trash():
+    try:
+        from core.memory import Memory
+        mem = Memory()
+        trash = mem.get_trash()
+        return {"trash": trash}
+    except Exception as e:
+        return {"trash": [], "error": str(e)}
+
+@router.post("/api/trash/{item_id}/restore")
+async def restore_trash_item(item_id: str):
+    try:
+        from core.memory import Memory
+        mem = Memory()
+        success = mem.restore_from_trash(item_id)
+        if success:
+            return {"status": "success", "message": "Restored from trash"}
+        return {"status": "error", "message": "Item not found in trash"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@router.delete("/api/trash/empty")
+async def empty_trash():
+    try:
+        from core.memory import Memory
+        mem = Memory()
+        mem.empty_trash()
+        return {"status": "success", "message": "Trash emptied"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@router.delete("/api/trash/{item_id}")
+async def delete_trash_item(item_id: str):
+    try:
+        from core.memory import Memory
+        mem = Memory()
+        success = mem.delete_permanently(item_id)
+        if success:
+            return {"status": "success", "message": "Deleted permanently"}
+        return {"status": "error", "message": "Item not found in trash"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @router.get("/api/facts")
 async def get_facts():
     try:
         from core.memory import Memory
         mem = Memory()
-        facts = {k: v for k, v in mem.data.items() if k != "history"}
+        facts = {k: v for k, v in mem.data.items() if k not in ["history", "trash"]}
         return {"facts": facts}
     except Exception as e:
         return {"facts": {}, "error": str(e)}
