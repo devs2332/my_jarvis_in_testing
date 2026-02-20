@@ -56,10 +56,6 @@ class Memory:
             item["id"] = str(uuid.uuid4())
         if "timestamp" not in item:
             item["timestamp"] = time.time()
-        
-        # Add human-readable datetime
-        from datetime import datetime
-        item["datetime"] = datetime.fromtimestamp(item["timestamp"]).strftime("%Y-%m-%d %H:%M:%S")
             
         self.data["history"].append(item)
         
