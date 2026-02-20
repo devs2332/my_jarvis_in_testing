@@ -45,7 +45,8 @@ class InternetSearch:
                 for r in ddgs.text(query, max_results=max_results):
                     results.append({
                         "title": r.get("title", ""),
-                        "body": r.get("body", "")
+                        "body": r.get("body", ""),
+                        "href": r.get("href", r.get("link", "")) # Capture URL for scraping
                     })
             
             logger.info(f"✅ Found {len(results)} search results")

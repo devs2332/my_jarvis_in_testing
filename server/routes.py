@@ -111,17 +111,17 @@ async def ws_chat(websocket: WebSocket):
     vm = app.state.vector_memory
     voice = app.state.voice_manager
 
+    main_loop = asyncio.get_running_loop()
+
     # Voice callback — fires when STT recognizes speech
     def on_speech_recognized(text):
         if not text:
             return
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                asyncio.run_coroutine_threadsafe(
-                    _process_voice_command(text, websocket, agent, vm, voice),
-                    loop,
-                )
+            asyncio.run_coroutine_threadsafe(
+                _process_voice_command(text, websocket, agent, vm, voice),
+                main_loop,
+            )
         except Exception as e:
             logger.error(f"Voice callback err: {e}")
 

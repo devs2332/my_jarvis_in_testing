@@ -11,7 +11,8 @@ const AVAILABLE_MODELS = [
     { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'google', model: 'gemini-1.5-flash' },
     { id: 'mistral-large', name: 'Mistral Large', provider: 'mistral', model: 'mistral-large-latest' },
     { id: 'llama-3-groq', name: 'Llama 3 (Groq)', provider: 'groq', model: 'llama-3.1-8b-instant' },
-    { id: 'mistral-openrouter', name: 'Mistral 7B (OpenRouter)', provider: 'openrouter', model: 'mistralai/mistral-7b-instruct' },
+    { id: 'gpt-oss-120b', name: 'GPT-OSS 120B (Free)', provider: 'openrouter', model: 'openai/gpt-oss-120b' },
+    { id: 'gpt-oss-nvidia', name: 'GPT-OSS 120B (NVIDIA)', provider: 'nvidia', model: 'openai/gpt-oss-120b' },
 ];
 
 export default function ChatPanel() {
@@ -30,7 +31,6 @@ export default function ChatPanel() {
     // Feature State
     const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[4]); // Default to Groq (Index 4)
     const [isResearchMode, setIsResearchMode] = useState(false);
-    const [isFastMode, setIsFastMode] = useState(false);
 
     // UI State
     const [showModelMenu, setShowModelMenu] = useState(false);
@@ -204,7 +204,6 @@ export default function ChatPanel() {
         const payload = {
             message: userMsg,
             research_mode: isResearchMode,
-            fast_mode: isFastMode,
             provider: selectedModel.provider,
             model: selectedModel.model
         };
@@ -223,7 +222,7 @@ export default function ChatPanel() {
             }
             setLoading(false);
         }
-    }, [input, loading, streaming, isResearchMode, isFastMode, selectedModel, chatId, navigate]);
+    }, [input, loading, streaming, isResearchMode, selectedModel, chatId, navigate]);
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -380,20 +379,14 @@ export default function ChatPanel() {
                                             <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Deep Research</span>
                                         </label>
 
-                                        <label className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors">
-                                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isFastMode ? 'bg-green-500 border-green-500' : 'border-slate-400'}`}>
-                                                {isFastMode && <span className="material-icons text-[10px] text-white font-bold">check</span>}
-                                            </div>
-                                            <input type="checkbox" className="hidden" checked={isFastMode} onChange={() => setIsFastMode(!isFastMode)} />
-                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Fast Mode</span>
-                                        </label>
+
                                     </div>
                                 )}
                             </div>
 
                             <textarea
                                 className="w-full bg-transparent border-none focus:ring-0 resize-none py-3 text-slate-800 dark:text-slate-100 placeholder-slate-400 max-h-48 overflow-y-auto outline-none"
-                                placeholder={isResearchMode ? "Ask something complex (Research On)..." : isFastMode ? "Ask for a quick answer (Fast Mode)..." : "Type a message..."}
+                                placeholder={isResearchMode ? "Ask something complex (Research On)..." : "Type a message..."}
                                 rows={1}
                                 style={{ minHeight: '44px' }}
                                 value={input}
@@ -431,12 +424,7 @@ export default function ChatPanel() {
                                 <span className="material-icons text-[10px]">travel_explore</span> RESEARCH ON
                             </span>
                         )}
-                        {isFastMode && (
-                            <span className="text-[10px] font-bold text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                <span className="material-icons text-[10px]">bolt</span> FAST MODE
-                            </span>
-                        )}
-                        {!isResearchMode && !isFastMode && (
+                        {!isResearchMode && (
                             <p className="text-[11px] text-slate-400 dark:text-slate-500">
                                 AI may produce inaccurate information about people, places, or facts.
                             </p>

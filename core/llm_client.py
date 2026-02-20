@@ -78,7 +78,14 @@ class LLMClient:
                 from openai import OpenAI
                 api_key = os.getenv("OPENROUTER_API_KEY")
                 if not api_key: raise ValueError("OPENROUTER_API_KEY not found")
-                client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+                client = OpenAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=api_key,
+                    default_headers={
+                        "HTTP-Referer": "http://localhost:8080",
+                        "X-Title": "Jarvis AI",
+                    },
+                )
                 logger.info("✅ OpenRouter client initialized")
 
             elif provider == "nvidia":
@@ -150,14 +157,23 @@ class LLMClient:
 
                 elif active_provider == "openrouter":
                     res = client.chat.completions.create(
-                        model=model, messages=[{"role": "user", "content": prompt}], temperature=temperature
+                        model=model,
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=temperature,
+                        extra_headers={
+                            "HTTP-Referer": "https://jarvis-ai.local",
+                            "X-Title": "Jarvis AI",
+                        },
                     )
                     return res.choices[0].message.content
                     
                 elif active_provider == "nvidia":
                     res = client.chat.completions.create(
-                        model=model, messages=[{"role": "user", "content": prompt}], temperature=temperature,
-                        max_tokens=1024, extra_body={"chat_template_kwargs": {"thinking": True}}
+                        model=model,
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=temperature,
+                        top_p=1,
+                        max_tokens=4096,
                     )
                     return res.choices[0].message.content
                     
@@ -211,7 +227,12 @@ class LLMClient:
             
             elif active_provider == "openrouter":
                 stream = client.chat.completions.create(
-                    model=model, messages=[{"role": "user", "content": prompt}], temperature=temperature, stream=True
+                    model=model, messages=[{"role": "user", "content": prompt}],
+                    temperature=temperature, stream=True,
+                    extra_headers={
+                        "HTTP-Referer": "https://jarvis-ai.local",
+                        "X-Title": "Jarvis AI",
+                    },
                 )
                 for chunk in stream:
                     delta = chunk.choices[0].delta
@@ -219,12 +240,20 @@ class LLMClient:
 
             elif active_provider == "nvidia":
                 stream = client.chat.completions.create(
-                    model=model, messages=[{"role": "user", "content": prompt}], temperature=temperature, 
-                    max_tokens=1024, stream=True, extra_body={"chat_template_kwargs": {"thinking": True}}
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=temperature,
+                    top_p=1,
+                    max_tokens=4096,
+                    stream=True,
                 )
                 for chunk in stream:
+                    if not getattr(chunk, "choices", None):
+                        continue
                     delta = chunk.choices[0].delta
-                    if delta.content: yield delta.content
+                    # Skip reasoning_content (internal chain-of-thought — not for display)
+                    if delta.content:
+                        yield delta.content
 
             elif active_provider == "google":
                 generation_config = {"temperature": temperature}

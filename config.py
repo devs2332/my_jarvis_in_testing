@@ -10,7 +10,7 @@ ASSISTANT_NAME = "JARVIS"
 
 # ===== LLM PROVIDER CONFIG =====
 # Options: "google", "groq", "mistral", "openrouter", "openai", "nvidia"
-LLM_PROVIDER = "mistral"
+LLM_PROVIDER = "nvidia"
 
 # Options: "local" (Faster-Whisper), "speechbrain", "groq" (Cloud)
 STT_ENGINE = "speechbrain"
@@ -18,9 +18,9 @@ STT_ENGINE = "speechbrain"
 MODEL_GOOGLE = "gemini-1.5-flash"
 MODEL_GROQ = "llama-3.1-8b-instant"
 MODEL_MISTRAL = "mistral-large-latest"
-MODEL_OPENROUTER = "mistralai/mistral-7b-instruct"
+MODEL_OPENROUTER = "openai/gpt-oss-120b"
 MODEL_OPENAI = "gpt-4o-mini"   # fast + cheap
-MODEL_NVIDIA = "moonshotai/kimi-k2.5"
+MODEL_NVIDIA = "openai/gpt-oss-120b"
 
 def get_google_api_key(): return os.getenv("GOOGLE_API_KEY")
 def get_groq_api_key(): return os.getenv("GROQ_API_KEY")

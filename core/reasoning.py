@@ -96,23 +96,7 @@ class ReasoningEngine:
         # ── Formatting instructions (mode-specific) ──
         prompt += "\nFORMATTING RULES (you MUST follow these exactly):\n"
 
-        if fast_mode:
-            prompt += """
-You are in **FAST MODE**. Follow these rules strictly:
-- Give a VERY SHORT answer: 2-4 sentences maximum
-- Use bullet points (•) for any list items
-- Start directly with the answer — NO introduction, NO preamble
-- Do NOT use headers or sections
-- Do NOT say "Based on the search results" or similar filler
-- If the answer is a single fact, give just that fact in one sentence
-- Bold (**word**) only the most critical keyword in your answer
-
-Example format:
-**Python** is a high-level programming language.
-• Created by Guido van Rossum in 1991
-• Used for web dev, AI/ML, automation
-"""
-        elif research_mode:
+        if research_mode:
             prompt += """
 You are in **DEEP RESEARCH MODE**. Follow these rules strictly:
 - Structure your answer as a well-organized research report
@@ -146,16 +130,19 @@ Brief introduction...
 """
         else:
             prompt += """
-You are in **NORMAL MODE**. Follow these rules:
-- Give a clear, well-structured answer
-- Use **bold** for key terms and important concepts
-- Use bullet points for lists of 3+ items
-- Use short paragraphs (2-3 sentences each)
-- Use `## Headers` only if the answer has multiple distinct topics
-- Be conversational but informative
-- Aim for 100-200 words unless the topic needs more
-- Do NOT start with "Based on the search results" or similar filler
-- Start directly with the answer
+You are in **FAST MODE** (default). Follow these rules strictly:
+- Give a VERY SHORT answer: 2-4 sentences maximum
+- Use bullet points (•) for any list items
+- Start directly with the answer — NO introduction, NO preamble
+- Do NOT use headers or sections
+- Do NOT say "Based on the search results" or similar filler
+- If the answer is a single fact, give just that fact in one sentence
+- Bold (**word**) only the most critical keyword in your answer
+
+Example format:
+**Python** is a high-level programming language.
+• Created by Guido van Rossum in 1991
+• Used for web dev, AI/ML, automation
 """
 
         if language and language.lower() == "hindi":
