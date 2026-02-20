@@ -143,13 +143,14 @@ class ToolRegistry:
         """
         return list(self.tools.keys())
     
-    def execute_tool(self, name, **kwargs):
+    def execute_tool(self, name, *args, **kwargs):
         """
         Execute a tool by name.
         
         Args:
             name (str): Tool name
-            **kwargs: Tool parameters
+            *args: Positional tool parameters (from planner-generated calls)
+            **kwargs: Keyword tool parameters (from direct calls)
             
         Returns:
             Any: Tool execution result
@@ -161,7 +162,7 @@ class ToolRegistry:
         
         try:
             logger.info(f"🔧 Executing tool: {name}")
-            result = tool["function"](**kwargs)
+            result = tool["function"](*args, **kwargs)
             logger.info(f"✅ Tool executed successfully: {name}")
             return result
         except Exception as e:

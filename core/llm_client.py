@@ -233,10 +233,167 @@ class LLMClient:
                 for chunk in stream:
                     if chunk.text: yield chunk.text
 
+            elif active_provider == "mistral":
+                stream = client.chat.stream(
+                    model=model, messages=[{"role": "user", "content": prompt}], temperature=temperature
+                )
+                for event in stream:
+                    delta = event.data.choices[0].delta
+                    if delta.content: yield delta.content
+
             else:
                 yield self.generate(prompt, temperature, provider=active_provider, model=model)
 
         except Exception as e:
             logger.error(f"❌ Streaming error: {e}")
             yield f"Error: {str(e)}"
+
+    def generate_with_tools(self, prompt, tools, temperature=0.5, provider=None, model=None):
+        """
+        Generate a response with tool-calling support.
+        
+        For OpenAI/Groq/Mistral: uses native function-calling via `tools=` parameter.
+        For Google: uses genai tool declarations.
+        For others: falls back to prompt-based JSON extraction.
+        
+        Args:
+            prompt (str): User prompt
+            tools (list): Tool schemas in OpenAI function-calling format
+            temperature (float): Sampling temperature
+            provider (str): Override provider
+            model (str): Override model
+            
+        Returns:
+            dict: {"type": "text"|"tool_call", "content": str, 
+                   "tool_name": str|None, "tool_args": dict|None}
+        """
+        active_provider = provider or self.default_provider
+
+        if not model:
+            if active_provider == "groq": model = "llama-3.1-8b-instant"
+            elif active_provider == "openai": model = "gpt-4o-mini"
+            elif active_provider == "mistral": model = "mistral-large-latest"
+            elif active_provider == "google":
+                from config import MODEL_GOOGLE
+                model = MODEL_GOOGLE
+            elif active_provider == "openrouter":
+                from config import MODEL_OPENROUTER
+                model = MODEL_OPENROUTER
+            elif active_provider == "nvidia":
+                from config import MODEL_NVIDIA
+                model = MODEL_NVIDIA
+
+        try:
+            client = self._get_client(active_provider)
+
+            # Providers with native tool-calling support
+            if active_provider in ("openai", "groq", "openrouter"):
+                res = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    tools=tools,
+                    tool_choice="auto",
+                    temperature=temperature,
+                )
+                msg = res.choices[0].message
+                
+                if msg.tool_calls:
+                    tc = msg.tool_calls[0]
+                    import json
+                    return {
+                        "type": "tool_call",
+                        "content": msg.content or "",
+                        "tool_name": tc.function.name,
+                        "tool_args": json.loads(tc.function.arguments),
+                    }
+                return {"type": "text", "content": msg.content, "tool_name": None, "tool_args": None}
+
+            elif active_provider == "mistral":
+                res = client.chat.complete(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    tools=tools,
+                    tool_choice="auto",
+                    temperature=temperature,
+                )
+                msg = res.choices[0].message
+
+                if msg.tool_calls:
+                    tc = msg.tool_calls[0]
+                    import json
+                    return {
+                        "type": "tool_call",
+                        "content": msg.content or "",
+                        "tool_name": tc.function.name,
+                        "tool_args": json.loads(tc.function.arguments) if isinstance(tc.function.arguments, str) else tc.function.arguments,
+                    }
+                return {"type": "text", "content": msg.content, "tool_name": None, "tool_args": None}
+
+            elif active_provider == "google":
+                # Google uses a different format for tools
+                import google.generativeai as genai
+                
+                # Convert OpenAI tool format to Google format
+                google_tools = []
+                for t in tools:
+                    func = t["function"]
+                    google_tools.append(genai.types.Tool(
+                        function_declarations=[{
+                            "name": func["name"],
+                            "description": func["description"],
+                            "parameters": func.get("parameters", {}),
+                        }]
+                    ))
+
+                model_instance = client.GenerativeModel(model, tools=google_tools)
+                res = model_instance.generate_content(prompt)
+
+                # Check for function call in response
+                if res.candidates and res.candidates[0].content.parts:
+                    for part in res.candidates[0].content.parts:
+                        if hasattr(part, "function_call") and part.function_call:
+                            fc = part.function_call
+                            return {
+                                "type": "tool_call",
+                                "content": "",
+                                "tool_name": fc.name,
+                                "tool_args": dict(fc.args) if fc.args else {},
+                            }
+                return {"type": "text", "content": res.text, "tool_name": None, "tool_args": None}
+
+            else:
+                # Fallback: prompt-based JSON extraction
+                tool_desc = "\n".join(
+                    f"- {t['function']['name']}: {t['function']['description']}"
+                    for t in tools
+                )
+                enhanced_prompt = f"""{prompt}
+
+Available tools:
+{tool_desc}
+
+If you need to use a tool, respond ONLY with JSON: {{"tool": "tool_name", "args": {{...}}}}
+Otherwise, respond normally."""
+
+                response = self.generate(enhanced_prompt, temperature, provider=active_provider, model=model)
+                
+                # Try to parse tool call from response
+                import json
+                try:
+                    parsed = json.loads(response.strip())
+                    if "tool" in parsed:
+                        return {
+                            "type": "tool_call",
+                            "content": "",
+                            "tool_name": parsed["tool"],
+                            "tool_args": parsed.get("args", {}),
+                        }
+                except (json.JSONDecodeError, TypeError):
+                    pass
+                
+                return {"type": "text", "content": response, "tool_name": None, "tool_args": None}
+
+        except Exception as e:
+            logger.error(f"❌ Tool-calling error: {e}")
+            return {"type": "text", "content": f"Error: {str(e)}", "tool_name": None, "tool_args": None}
 

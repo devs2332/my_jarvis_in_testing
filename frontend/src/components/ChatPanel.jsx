@@ -25,6 +25,7 @@ export default function ChatPanel() {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [streaming, setStreaming] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
 
     // Feature State
     const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[4]); // Default to Groq (Index 4)
@@ -40,6 +41,7 @@ export default function ChatPanel() {
     const wsRef = useRef(null);
     const plusMenuRef = useRef(null);
     const modelMenuRef = useRef(null);
+    const recognitionRef = useRef(null);
 
     // Calculate display messages (Local messages OR History)
     // CRITICAL: This variable must be defined before use
@@ -141,6 +143,11 @@ export default function ChatPanel() {
                             }
                             return [...prev, { role: 'assistant', content: data.text, time: new Date() }];
                         });
+                    } else if (data.type === 'user_voice_echo') {
+                        // The server transcribed our voice, add it to the chat as our own message!
+                        setMessages(prev => [...prev, { role: 'user', content: data.text, time: new Date() }]);
+                    } else if (data.type === 'info') {
+                        console.log("Server Info:", data.text);
                     }
                 } catch (e) {
                     console.error("WS Message Parse Error", e);
@@ -160,6 +167,22 @@ export default function ChatPanel() {
         connectWS();
         return () => wsRef.current?.close();
     }, []);
+
+    // Toggle Backend Voice Manager
+    const toggleRecording = () => {
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+            alert("Waiting for server connection to activate microphone...");
+            return;
+        }
+
+        const newState = !isRecording;
+        setIsRecording(newState);
+
+        wsRef.current.send(JSON.stringify({
+            type: "voice_toggle",
+            active: newState
+        }));
+    };
 
     // Send Message Handler
     const sendMessage = useCallback(async (text = input) => {
@@ -250,8 +273,8 @@ export default function ChatPanel() {
                 </div>
             </header>
 
-            {/* Chat Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* Chat Area — pb-40 ensures content isn't hidden behind the fixed input bar */}
+            <div className="flex-1 overflow-y-auto p-4 pb-40 space-y-6">
                 {(displayMessages || []).length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center opacity-0 animate-fadeIn" style={{ opacity: 1, animationFillMode: 'forwards' }}>
                         <div className="w-24 h-24 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-blue-500/5 ring-1 ring-black/5 dark:ring-white/5">
@@ -273,13 +296,13 @@ export default function ChatPanel() {
                             key={index}
                             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
-                            <div className={`max-w-[850%] lg:max-w-[75%] rounded-2xl p-4 shadow-sm backdrop-blur-sm
+                            <div className={`max-w-[85%] lg:max-w-[75%] rounded-2xl p-4 shadow-sm backdrop-blur-sm
                             ${msg.role === 'user'
                                     ? 'bg-primary text-white ml-12 rounded-tr-sm'
                                     : 'bg-white/80 dark:bg-[#1e2936]/90 border border-slate-200 dark:border-slate-700/50 mr-12 rounded-tl-sm text-slate-800 dark:text-slate-200'
                                 }`}
                             >
-                                <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed">
+                                <div className="markdown-content text-sm leading-relaxed">
                                     <ReactMarkdown
                                         remarkPlugins={[remarkGfm]}
                                         components={{
@@ -377,6 +400,17 @@ export default function ChatPanel() {
                                 onChange={e => setInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
                             />
+
+                            <button
+                                className={`p-2 mb-[2px] rounded-lg shadow-sm hover:shadow transition-all duration-200 self-end mr-1 ${isRecording
+                                    ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-500 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400'
+                                    }`}
+                                onClick={toggleRecording}
+                                title={isRecording ? "Stop Recording" : "Start Recording"}
+                            >
+                                <span className="material-icons text-lg leading-none pt-0.5">mic</span>
+                            </button>
 
                             <button
                                 className={`p-2 mb-[2px] rounded-lg shadow-sm hover:shadow transition-all duration-200 self-end ${!input.trim() || loading || streaming

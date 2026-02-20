@@ -8,6 +8,7 @@ Provides natural-sounding speech synthesis with female voice using Edge-TTS.
 import os
 import asyncio
 import logging
+import threading
 import edge_tts
 from playsound import playsound
 
@@ -37,14 +38,7 @@ class Speaker:
 
     def speak(self, text):
         """
-        Convert text to speech and play it.
-        
-        Args:
-            text (str): Text to convert to speech
-            
-        Example:
-            >>> speaker = Speaker()
-            >>> speaker.speak("Hello, how are you?")
+        Convert text to speech and play it. Safe to call from any context.
         """
         if not text:
             logger.warning("Empty text provided to speaker")
@@ -53,8 +47,25 @@ class Speaker:
         logger.info(f"🔊 SPEAKING: {text[:50]}...")
 
         try:
-            # Run async TTS generation
-            asyncio.run(self._generate_and_play(text))
+            # Check if we're inside a running event loop (e.g. FastAPI)
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                # Inside async context — run in a separate thread with its own loop
+                result_event = threading.Event()
+                def _run_in_thread():
+                    try:
+                        asyncio.run(self._generate_and_play(text))
+                    finally:
+                        result_event.set()
+                t = threading.Thread(target=_run_in_thread, daemon=True)
+                t.start()
+                result_event.wait()
+            else:
+                asyncio.run(self._generate_and_play(text))
 
         except Exception as e:
             logger.error(f"❌ TTS ERROR: {e}")
@@ -63,9 +74,6 @@ class Speaker:
     async def _generate_and_play(self, text):
         """
         Generate and play TTS audio (async method).
-        
-        Args:
-            text (str): Text to synthesize
         """
         # Create unique filename
         filename = f"tts_{int(asyncio.get_event_loop().time() * 1000)}.mp3"
@@ -77,12 +85,13 @@ class Speaker:
             communicate = edge_tts.Communicate(text, self.voice)
             await communicate.save(filename)
 
-            # Play audio (blocking until finished)
+            # Play audio (in thread to not block event loop)
             logger.debug(f"Playing audio file: {filename}")
-            playsound(filename)
+            await asyncio.to_thread(playsound, filename)
 
         finally:
             # Cleanup - always remove file
             if os.path.exists(filename):
                 os.remove(filename)
                 logger.debug(f"Cleaned up audio file: {filename}")
+

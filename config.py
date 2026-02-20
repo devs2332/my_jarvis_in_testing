@@ -10,7 +10,7 @@ ASSISTANT_NAME = "JARVIS"
 
 # ===== LLM PROVIDER CONFIG =====
 # Options: "google", "groq", "mistral", "openrouter", "openai", "nvidia"
-LLM_PROVIDER = "groq"
+LLM_PROVIDER = "mistral"
 
 # Options: "local" (Faster-Whisper), "speechbrain", "groq" (Cloud)
 STT_ENGINE = "speechbrain"

@@ -62,26 +62,55 @@ class Agent:
                 self.state.set("SPEAKING")
                 return final_response
 
-        # 4️⃣ LLM with RAG context
-        if user_input.lower().startswith("fastmode:"):
-            fast_mode = True
-            user_input = user_input[9:].strip()  # Strip 'FastMode:'
-        
-        if user_input.lower().startswith("hindimode:") or user_input.lower().startswith("hindi:"):
-            language = "Hindi"
-            if user_input.lower().startswith("hindimode:"):
-                user_input = user_input[10:].strip()
-            else:
-                user_input = user_input[6:].strip()
+        # 4️⃣ Parse mode prefixes
+        user_input, fast_mode, language = self._parse_prefixes(user_input, fast_mode, language)
 
-        response = self.brain.think(user_input, research_mode=research_mode, fast_mode=fast_mode, language=language, provider=provider, model=model)
+        # 5️⃣ Try LLM with tool-calling (single-turn: call → execute → respond)
+        try:
+            from core.tool_schemas import get_tool_schemas
+            tool_schemas = get_tool_schemas()
+            
+            llm_result = self.llm.generate_with_tools(
+                user_input, tools=tool_schemas, provider=provider, model=model
+            )
+            
+            if llm_result.get("type") == "tool_call":
+                tool_name = llm_result["tool_name"]
+                tool_args = llm_result.get("tool_args", {})
+                
+                logger.info(f"🔧 LLM requested tool: {tool_name} with args: {tool_args}")
+                self.state.set("EXECUTING")
+                
+                # Execute the tool
+                if isinstance(tool_args, dict):
+                    tool_result = self.tool_registry.execute_tool(tool_name, **tool_args)
+                else:
+                    tool_result = self.tool_registry.execute_tool(tool_name, *tool_args)
+                
+                # Feed tool result back to LLM for final response
+                followup = f"Tool '{tool_name}' returned: {tool_result}\n\nBased on this result, provide a helpful response to the user's original request: {user_input}"
+                response = self.brain.think(
+                    followup, fast_mode=fast_mode, language=language,
+                    provider=provider, model=model,
+                )
+                self.state.set("SPEAKING")
+                return response
+        except Exception as e:
+            logger.debug(f"Tool-calling skipped: {e}")
+
+        # 6️⃣ Standard LLM with RAG context (fallback if no tool call)
+        response = self.brain.think(
+            user_input, research_mode=research_mode, fast_mode=fast_mode,
+            language=language, provider=provider, model=model,
+        )
         self.state.set("SPEAKING")
         return response
 
-    async def run_stream(self, user_input, research_mode=False, fast_mode=False, language="English", provider=None, model=None):
+    async def run_stream(self, user_input, research_mode=False, fast_mode=False,
+                         language="English", provider=None, model=None):
         """
         Async generator that yields response tokens for WebSocket streaming.
-        Falls back to chunked non-streaming if provider doesn't support streaming.
+        Delegates to brain.think_stream() for clean RAG + streaming.
         """
         self.state.set("THINKING")
 
@@ -92,100 +121,30 @@ class Agent:
             yield result
             return
 
-        # Stream from LLM
-        self.state.set("THINKING")
-        if hasattr(self.llm, "generate_stream"):
-            # Strip prefixes if present in streaming mode
-            if user_input.lower().startswith("fastmode:"):
-                fast_mode = True
-                user_input = user_input[9:].strip()
-            
-            if user_input.lower().startswith("hindimode:") or user_input.lower().startswith("hindi:"):
-                language = "Hindi"
-                if user_input.lower().startswith("hindimode:"):
-                    user_input = user_input[10:].strip()
-                else:
-                    user_input = user_input[6:].strip()
+        # Parse mode prefixes
+        user_input, fast_mode, language = self._parse_prefixes(user_input, fast_mode, language)
 
-            # Build prompt with RAG context
-            # Note: For now run_stream duplicates some brain logic, 
-            # ideally we should use brain.think_stream() but modifying brain.think() is enough for now.
-            # We will use brain.think() for context building logic if we refactor,
-            # but here we just need to ensure parameters are respected.
-            
-            # Since strict equality with brain.think is complex due to streaming, we will patch it here:
-            max_results = 5
-            deep_research = False
-            
-            if fast_mode:
-                max_results = 1
-                deep_research = True
-            elif research_mode or "research" in user_input.lower():
-                max_results = 10
-                deep_research = True
-            
-            search_results = self.brain.search.search(user_input, max_results=max_results)
-            
-            # Deep Research / FastMode Scraping
-            if deep_research and search_results:
-                from tools.browser import scrape_url
-                for result in search_results[:3]:
-                    try:
-                        url = result.get('href', '')
-                        if url:
-                            content = scrape_url(url)
-                            if len(content) > 500:
-                                result['body'] += f"\n\n[FULL CONTENT]:\n{content[:2000]}..."
-                    except Exception:
-                        pass
-            
-            memory_context = []
-            if self.vector_memory:
-                memory_context = self.vector_memory.search(user_input, top_k=3)
-            
-            prompt = self.brain.reasoning.build_prompt(
-                user_input, search_results, memory_context=memory_context, fast_mode=fast_mode, language=language
-            )
-            
-            # Apply formatting rules to ALL prompts
-            prompt += """
-FORMATTING RULES - STRICTLY FOLLOW THESE:
-1. **Structure**: Use clear headings (# Phase 1, ## Goal) and subheadings.
-2. **Bullet Points**: Use bullet points for lists. Do NOT write comma-separated lists in a paragraph.
-3. **Spacing**: Add a blank line between every paragraph or list item.
-4. **Bold Text**: Use **bold** for key terms and concepts.
-5. **Conciseness**: Keep paragraphs short (max 2-3 sentences).
-
-EXAMPLE FORMAT (for Plans/Roadmaps):
-# Phase 1
-**Goal**: Technical Foundation
-- Point 1
-- Point 2
-"""
-
-            for token in self.llm.generate_stream(prompt, provider=provider, model=model):
-                yield token
-        else:
-            # Fallback: get full response, yield in chunks
-            if user_input.lower().startswith("fastmode:"):
-                fast_mode = True
-                user_input = user_input[9:].strip()
-
-            if user_input.lower().startswith("hindimode:") or user_input.lower().startswith("hindi:"):
-                language = "Hindi"
-                if user_input.lower().startswith("hindimode:"):
-                    user_input = user_input[10:].strip()
-                else:
-                    user_input = user_input[6:].strip()
-
-            response = self.brain.think(user_input, research_mode=research_mode, fast_mode=fast_mode, language=language, provider=provider, model=model)
-            chunk_size = 4
-            words = response.split(" ")
-            for i in range(0, len(words), chunk_size):
-                chunk = " ".join(words[i:i + chunk_size])
-                if i > 0:
-                    chunk = " " + chunk
-                yield chunk
-                await asyncio.sleep(0.05)
+        # Stream from Brain (single source of RAG logic)
+        async for token in self.brain.think_stream(
+            user_input, research_mode=research_mode, fast_mode=fast_mode,
+            language=language, provider=provider, model=model,
+        ):
+            yield token
 
         self.state.set("SPEAKING")
+
+    @staticmethod
+    def _parse_prefixes(user_input, fast_mode, language):
+        """Extract FastMode: and HindiMode: prefixes from user input."""
+        if user_input.lower().startswith("fastmode:"):
+            fast_mode = True
+            user_input = user_input[9:].strip()
+
+        if user_input.lower().startswith("hindimode:") or user_input.lower().startswith("hindi:"):
+            language = "Hindi"
+            if user_input.lower().startswith("hindimode:"):
+                user_input = user_input[10:].strip()
+            else:
+                user_input = user_input[6:].strip()
+
+        return user_input, fast_mode, language

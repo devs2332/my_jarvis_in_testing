@@ -17,6 +17,8 @@ speechbrain
 edge-tts
 playsound
 websockets
+silero-vad
+torch
 
 # Vision capabilities
 pytesseract
@@ -37,4 +39,3 @@ uvicorn[standard]
 # Vector Database
 chromadb
 sentence-transformers
-

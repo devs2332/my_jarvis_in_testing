@@ -1,17 +1,15 @@
-"""
-Voice module for Jarvis AI Assistant.
-
-This package contains voice processing components:
-- Listener: Speech-to-text using Whisper
-- Speaker: Text-to-speech using gTTS
-- WakeWordDetector: Wake word detection
-"""
-
-from voice.stt import Listener
-from voice.tts import Speaker
-
+from voice.audio_stream import AudioStream
+from voice.vad_engine import VADEngine
+from voice.stt_engine import STTEngine
+from voice.tts_engine import TTSEngine
+from voice.interrupt_handler import InterruptHandler
+from voice.voice_manager import VoiceManager
 
 __all__ = [
-    'Listener',
-    'Speaker',
+    'AudioStream',
+    'VADEngine',
+    'STTEngine',
+    'TTSEngine',
+    'InterruptHandler',
+    'VoiceManager'
 ]

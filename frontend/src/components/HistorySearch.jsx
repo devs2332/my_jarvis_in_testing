@@ -20,13 +20,20 @@ export default function HistorySearch() {
             const data = await fetchJSON('/api/history?limit=100');
             // Transform data if needed, backend returns list of {user, jarvis, id, timestamp}
             const formatted = (data.conversations || []).map(item => ({
-                id: item.id || Math.random().toString(), // fallback ID
+                id: item.id || Math.random().toString(),
                 title: item.user || "Conversation",
-                preview: item.jarvis ? item.jarvis.substring(0, 80) + "..." : "No response",
-                time: item.timestamp ? new Date(item.timestamp * 1000).toLocaleString() : "Unknown",
-                type: 'chat', // default
-                starred: false, // default
-                raw_time: item.timestamp
+                preview: item.jarvis ? item.jarvis.substring(0, 120) + "..." : "No response",
+                time: item.datetime || (item.timestamp ? new Date(item.timestamp * 1000).toLocaleString() : "Unknown"),
+                type: item.fast_mode ? 'fast' : item.research_mode ? 'research' : 'chat',
+                starred: false,
+                raw_time: item.timestamp,
+                // New metadata
+                model: item.model || null,
+                provider: item.provider || null,
+                fast_mode: item.fast_mode || false,
+                research_mode: item.research_mode || false,
+                language: item.language || "English",
+                response_length: item.response_length || 0,
             }));
             setHistoryItems(formatted);
         } catch (error) {
@@ -148,16 +155,57 @@ export default function HistorySearch() {
                                             >
                                                 <div className="flex items-start justify-between gap-4">
                                                     <div className="flex items-start gap-4 overflow-hidden">
-                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${item.type === 'voice' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'}`}>
-                                                            <span className="material-icons text-xl">{item.type === 'voice' ? 'mic' : 'chat_bubble_outline'}</span>
+                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${item.type === 'research' ? 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400' :
+                                                                item.type === 'fast' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400' :
+                                                                    'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                                                            }`}>
+                                                            <span className="material-icons text-xl">
+                                                                {item.type === 'research' ? 'science' : item.type === 'fast' ? 'bolt' : 'chat_bubble_outline'}
+                                                            </span>
                                                         </div>
                                                         <div className="min-w-0 flex-1">
                                                             <h4 className="font-semibold text-slate-900 dark:text-slate-100 truncate pr-8 group-hover:text-primary transition-colors">{item.title}</h4>
                                                             <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mt-1 leading-relaxed">{item.preview}</p>
+                                                            {/* Metadata Badges */}
+                                                            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                                                {item.model && (
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/30">
+                                                                        <span className="material-icons" style={{ fontSize: '11px' }}>smart_toy</span>
+                                                                        {item.model}
+                                                                    </span>
+                                                                )}
+                                                                {item.provider && (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                                                        {item.provider}
+                                                                    </span>
+                                                                )}
+                                                                {item.research_mode && (
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 border border-green-200/50 dark:border-green-800/30">
+                                                                        <span className="material-icons" style={{ fontSize: '11px' }}>science</span>
+                                                                        Research
+                                                                    </span>
+                                                                )}
+                                                                {item.fast_mode && (
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800/30">
+                                                                        <span className="material-icons" style={{ fontSize: '11px' }}>bolt</span>
+                                                                        Fast
+                                                                    </span>
+                                                                )}
+                                                                {item.language && item.language !== "English" && (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400 border border-purple-200/50 dark:border-purple-800/30">
+                                                                        {item.language}
+                                                                    </span>
+                                                                )}
+                                                                {item.response_length > 0 && (
+                                                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1">
+                                                                        {item.response_length > 1000 ? `${(item.response_length / 1000).toFixed(1)}k` : item.response_length} chars
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-col items-end gap-2 pl-2 shrink-0">
-                                                        <span className="text-xs text-slate-400 whitespace-nowrap">{item.time.split(',')[1] || item.time}</span>
+                                                        <span className="text-xs text-slate-400 whitespace-nowrap">{item.time}</span>
                                                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity translate-x-2 group-hover:translate-x-0 duration-200">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); /* toggle star */ }}

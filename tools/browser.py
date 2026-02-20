@@ -93,7 +93,8 @@ def get_search_results(query: str, max_results=5):
         
     except Exception as e:
         logger.error(f"❌ Error getting search results: {e}")
-        
+    
+    return results
 
 def scrape_url(url: str):
     """

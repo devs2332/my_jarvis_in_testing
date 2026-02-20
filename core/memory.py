@@ -49,18 +49,22 @@ class Memory:
 
     # ✅ CONVERSATION HISTORY (With IDs & Timestamps)
     def remember(self, item):
-        # item is typically {"user": "...", "jarvis": "..."}
+        # item is typically {"user": "...", "jarvis": "...", "provider": "...", "model": "...", ...}
         
         # Add metadata if missing
         if "id" not in item:
             item["id"] = str(uuid.uuid4())
         if "timestamp" not in item:
             item["timestamp"] = time.time()
+        
+        # Add human-readable datetime
+        from datetime import datetime
+        item["datetime"] = datetime.fromtimestamp(item["timestamp"]).strftime("%Y-%m-%d %H:%M:%S")
             
         self.data["history"].append(item)
         
-        # Keep manageable size (last 100 items for now, customizable)
-        if len(self.data["history"]) > 100:
+        # Keep manageable size (last 200 items)
+        if len(self.data["history"]) > 200:
             self.data["history"].pop(0)
             
         self._save()
