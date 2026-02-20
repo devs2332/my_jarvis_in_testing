@@ -1,17 +1,17 @@
-"""
-Voice module for Jarvis AI Assistant.
+"""Voice module for Jarvis AI Assistant."""
 
-This package contains voice processing components:
-- Listener: Speech-to-text using Whisper
-- Speaker: Text-to-speech using gTTS
-- WakeWordDetector: Wake word detection
-"""
+from voice.offline_assistant import OfflineVoiceAssistant
 
-from voice.stt import Listener
-from voice.tts import Speaker
+__all__ = ["Listener", "Speaker", "OfflineVoiceAssistant"]
 
 
-__all__ = [
-    'Listener',
-    'Speaker',
-]
+def __getattr__(name):
+    if name == "Listener":
+        from voice.stt import Listener
+
+        return Listener
+    if name == "Speaker":
+        from voice.tts import Speaker
+
+        return Speaker
+    raise AttributeError(name)
