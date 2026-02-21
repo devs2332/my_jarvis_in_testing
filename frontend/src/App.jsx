@@ -17,7 +17,21 @@ import UserProfile from './components/UserProfile'
 function AppContent() {
     const location = useLocation();
     const [connected, setConnected] = useState(false)
-    const [activeView, setActiveView] = useState('chat') // Kept for legacy prop if needed, but router drives view now.
+
+    // ─── Dark Mode (Global, Persisted) ───
+    const [darkMode, setDarkMode] = useState(() => {
+        const saved = localStorage.getItem('jarvis-dark-mode');
+        return saved !== null ? saved === 'true' : false; // Default: light mode
+    });
+
+    useEffect(() => {
+        if (darkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('jarvis-dark-mode', String(darkMode));
+    }, [darkMode]);
 
     // Chat State (Lifted or specialized? For now we keep main chat logic here to avoid huge refactor, 
     // but ideally ChatPanel should handle its own state or use a Context)
@@ -134,14 +148,16 @@ function AppContent() {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     return (
-        <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden font-display text-slate-800 dark:text-slate-100">
+        <div className="flex h-screen w-full bg-white dark:bg-[#0b1217] overflow-hidden font-display text-gray-900 dark:text-slate-100 antialiased">
             <Sidebar
                 connected={connected}
                 isCollapsed={isSidebarCollapsed}
                 toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                darkMode={darkMode}
+                setDarkMode={setDarkMode}
             />
 
-            <main className={`flex-1 flex flex-col min-w-0 bg-white/50 dark:bg-[#0b1217] transition-all duration-300`}>
+            <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0b1217] relative transition-all duration-300">
                 <Routes>
                     <Route path="/" element={
                         <ChatPanel
@@ -168,7 +184,7 @@ function AppContent() {
                     <Route path="/status" element={<SystemStatus status={systemStatus} />} />
 
                     {/* New Routes */}
-                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/settings" element={<Settings darkMode={darkMode} setDarkMode={setDarkMode} />} />
                     <Route path="/history" element={<HistorySearch />} />
                     <Route path="/trash" element={<Trash />} />
                     <Route path="/profile" element={<UserProfile />} />

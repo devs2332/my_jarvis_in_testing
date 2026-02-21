@@ -31,9 +31,11 @@ export default function ChatPanel() {
     // Feature State
     const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[4]); // Default to Groq (Index 4)
     const [isResearchMode, setIsResearchMode] = useState(false);
+    const [language, setLanguage] = useState('English'); // New Language State
 
     // UI State
     const [showModelMenu, setShowModelMenu] = useState(false);
+    const [showLanguageMenu, setShowLanguageMenu] = useState(false); // New Dropdown State
     const [showPlusMenu, setShowPlusMenu] = useState(false);
 
     // Refs
@@ -41,6 +43,7 @@ export default function ChatPanel() {
     const wsRef = useRef(null);
     const plusMenuRef = useRef(null);
     const modelMenuRef = useRef(null);
+    const languageMenuRef = useRef(null);
     const recognitionRef = useRef(null);
 
     // Calculate display messages (Local messages OR History)
@@ -64,6 +67,9 @@ export default function ChatPanel() {
             }
             if (modelMenuRef.current && !modelMenuRef.current.contains(event.target)) {
                 setShowModelMenu(false);
+            }
+            if (languageMenuRef.current && !languageMenuRef.current.contains(event.target)) {
+                setShowLanguageMenu(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
@@ -205,7 +211,8 @@ export default function ChatPanel() {
             message: userMsg,
             research_mode: isResearchMode,
             provider: selectedModel.provider,
-            model: selectedModel.model
+            model: selectedModel.model,
+            language: language
         };
 
         if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -232,21 +239,20 @@ export default function ChatPanel() {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full relative bg-background-light dark:bg-background-dark overflow-hidden">
+        <div className="flex-1 flex flex-col h-full relative bg-white dark:bg-[#0b1217] overflow-hidden">
             {/* Header */}
-            <header className="h-16 flex items-center justify-between px-6 border-b border-transparent shrink-0 z-20">
-                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 relative" ref={modelMenuRef}>
-                    <span className="text-sm font-medium">Model:</span>
+            <header className="h-[72px] flex items-center justify-between px-6 sticky top-0 bg-white/95 dark:bg-[#0b1217]/95 backdrop-blur-sm z-10 shrink-0 border-b border-gray-100 dark:border-slate-800">
+                <div className="flex items-center gap-2 relative" ref={modelMenuRef}>
                     <button
                         onClick={() => setShowModelMenu(!showModelMenu)}
-                        className="flex items-center gap-1 text-sm font-semibold text-slate-800 dark:text-white hover:text-primary transition-colors bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-primary/50"
+                        className="flex items-center gap-2 font-bold text-gray-800 dark:text-white text-xl hover:bg-gray-50 dark:hover:bg-slate-800 px-3 py-2 rounded-xl transition"
                     >
-                        {selectedModel.name} <span className="material-icons text-base">expand_more</span>
+                        {selectedModel.name} <span className="material-icons text-gray-400 dark:text-slate-500 text-xl">keyboard_arrow_down</span>
                     </button>
 
                     {/* Model Dropdown */}
                     {showModelMenu && (
-                        <div className="absolute top-full left-10 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-2 animate-in fade-in zoom-in-95 duration-100 font-display z-50">
+                        <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.15)] border border-gray-100 dark:border-slate-700 py-2 animate-in fade-in zoom-in-95 duration-100 font-display z-50">
                             <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Select Model</div>
                             {AVAILABLE_MODELS.map(m => (
                                 <button
@@ -255,8 +261,8 @@ export default function ChatPanel() {
                                         setSelectedModel(m);
                                         setShowModelMenu(false);
                                     }}
-                                    className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors
-                                        ${selectedModel.id === m.id ? 'text-primary font-medium bg-primary/5' : 'text-slate-700 dark:text-slate-200'}`}
+                                    className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors
+                                        ${selectedModel.id === m.id ? 'text-primary font-medium bg-primary/5' : 'text-gray-700 dark:text-slate-200'}`}
                                 >
                                     {m.name}
                                     {selectedModel.id === m.id && <span className="material-icons text-sm text-primary">check</span>}
@@ -265,19 +271,53 @@ export default function ChatPanel() {
                         </div>
                     )}
                 </div>
-                <div className="flex items-center gap-2">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Share Chat">
-                        <span className="material-icons text-[20px]">ios_share</span>
+
+                {/* Right Side Header Items: Language + Actions */}
+                <div className="flex items-center gap-3">
+                    <div className="relative" ref={languageMenuRef}>
+                        <button
+                            onClick={() => setShowLanguageMenu(!showLanguageMenu)}
+                            className="flex items-center gap-1 text-[13px] font-semibold text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors px-3 py-1.5 rounded-lg"
+                        >
+                            {language === 'English' ? 'EN' : 'HI'} <span className="material-icons text-sm">expand_more</span>
+                        </button>
+
+                        {showLanguageMenu && (
+                            <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.15)] border border-gray-100 dark:border-slate-700 py-2 animate-in fade-in zoom-in-95 duration-100 font-display z-50">
+                                <div className="px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Select Language</div>
+                                {['English', 'Hindi'].map(lang => (
+                                    <button
+                                        key={lang}
+                                        onClick={() => {
+                                            setLanguage(lang);
+                                            setShowLanguageMenu(false);
+                                        }}
+                                        className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors
+                                        ${language === lang ? 'text-primary font-medium bg-primary/5' : 'text-gray-700 dark:text-slate-200'}`}
+                                    >
+                                        {lang}
+                                        {language === lang && <span className="material-icons text-sm text-primary">check</span>}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <button className="w-10 h-10 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded-full transition" title="Share Chat">
+                        <span className="material-icons text-xl">ios_share</span>
+                    </button>
+                    <button className="w-8 h-8 flex flex-col items-center justify-center bg-gray-400 text-white hover:bg-gray-500 rounded-full transition">
+                        <span className="material-icons text-base font-bold">question_mark</span>
                     </button>
                 </div>
             </header>
 
-            {/* Chat Area — pb-40 ensures content isn't hidden behind the fixed input bar */}
-            <div className="flex-1 overflow-y-auto p-4 pb-40 space-y-6">
+            {/* Chat Area */}
+            <div className="flex-1 overflow-y-auto px-4 md:px-10 lg:px-24 xl:px-48 pt-4 pb-48 space-y-8">
                 {(displayMessages || []).length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center opacity-0 animate-fadeIn" style={{ opacity: 1, animationFillMode: 'forwards' }}>
+                    <div className="h-full flex flex-col items-center justify-center text-center">
                         <div className="w-24 h-24 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-blue-500/5 ring-1 ring-black/5 dark:ring-white/5">
-                            <span className="material-icons text-5xl text-primary bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">smart_toy</span>
+                            <span className="material-icons text-5xl text-primary">smart_toy</span>
                         </div>
                         <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-3 tracking-tight">
                             How can I help you?
@@ -293,44 +333,62 @@ export default function ChatPanel() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3, ease: "easeOut" }}
                             key={index}
-                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            className={`flex ${msg.role === 'user' ? 'justify-end gap-3' : 'gap-4'} mt-2`}
                         >
-                            <div className={`max-w-[85%] lg:max-w-[75%] rounded-2xl p-4 shadow-sm backdrop-blur-sm
-                            ${msg.role === 'user'
-                                    ? 'bg-primary text-white ml-12 rounded-tr-sm'
-                                    : 'bg-white/80 dark:bg-[#1e2936]/90 border border-slate-200 dark:border-slate-700/50 mr-12 rounded-tl-sm text-slate-800 dark:text-slate-200'
-                                }`}
-                            >
-                                <div className="markdown-content text-sm leading-relaxed">
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm]}
-                                        components={{
-                                            code({ node, inline, className, children, ...props }) {
-                                                const match = /language-(\w+)/.exec(className || '')
-                                                return !inline && match ? (
-                                                    <div className="rounded-lg overflow-hidden my-2 border border-slate-200 dark:border-slate-700 bg-[#0d1117]">
-                                                        <div className="flex items-center justify-between px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 text-xs text-slate-500 font-mono">
-                                                            <span>{match[1]}</span>
-                                                            <button className="hover:text-primary transition-colors">Copy</button>
+                            {msg.role !== 'user' && (
+                                <div className="w-8 h-8 rounded-full bg-primary flex flex-col items-center justify-center text-white shrink-0 shadow-sm mt-1">
+                                    <span className="material-icons text-[18px]">smart_toy</span>
+                                </div>
+                            )}
+
+                            <div className={`flex flex-col ${msg.role === 'user' ? 'items-end flex-1' : 'flex-1 min-w-0'} max-w-[85%] lg:max-w-[80%]`}>
+                                {msg.role === 'user' ? (
+                                    <div className="text-sm font-bold text-gray-800 dark:text-slate-200 mb-1 mr-2">You</div>
+                                ) : (
+                                    <div className="flex items-center gap-2 mb-1 h-[24px]">
+                                        <span className="font-bold text-gray-900 dark:text-white text-sm">Jarvis</span>
+                                        <span className="bg-[#f3f4f6] dark:bg-slate-800 text-gray-500 dark:text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-200 dark:border-slate-700">v4.0</span>
+                                    </div>
+                                )}
+
+                                <div className={`${msg.role === 'user' ? 'bg-[#f3f4f6] dark:bg-slate-800 text-gray-800 dark:text-slate-200 rounded-3xl rounded-tr-sm px-6 py-4' : 'bg-[#f9fafb] dark:bg-[#151b26] border border-gray-100 dark:border-slate-800 shadow-sm rounded-3xl rounded-tl-sm px-6 py-4 text-gray-800 dark:text-slate-200 w-full overflow-x-auto'} text-base leading-relaxed`}>
+                                    <div className="markdown-content">
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
+                                                code({ node, inline, className, children, ...props }) {
+                                                    const match = /language-(\w+)/.exec(className || '')
+                                                    return !inline && match ? (
+                                                        <div className="rounded-lg overflow-hidden my-2 border border-slate-200 bg-[#0d1117]">
+                                                            <div className="flex items-center justify-between px-3 py-1.5 bg-slate-800/50 border-b border-slate-700 text-xs text-slate-500 font-mono">
+                                                                <span>{match[1]}</span>
+                                                                <button className="hover:text-primary transition-colors">Copy</button>
+                                                            </div>
+                                                            <pre className="p-3 overflow-x-auto bg-[#0d1117] text-slate-300 scrollbar-thin scrollbar-thumb-slate-700">
+                                                                <code className={className} {...props}>
+                                                                    {children}
+                                                                </code>
+                                                            </pre>
                                                         </div>
-                                                        <pre className="p-3 overflow-x-auto bg-[#0d1117] text-slate-300 scrollbar-thin scrollbar-thumb-slate-700">
-                                                            <code className={className} {...props}>
-                                                                {children}
-                                                            </code>
-                                                        </pre>
-                                                    </div>
-                                                ) : (
-                                                    <code className={`${className} bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-pink-500 font-mono text-xs`} {...props}>
-                                                        {children}
-                                                    </code>
-                                                )
-                                            }
-                                        }}
-                                    >
-                                        {String(msg.content || '')}
-                                    </ReactMarkdown>
+                                                    ) : (
+                                                        <code className={`${className} bg-slate-100 px-1 py-0.5 rounded text-pink-500 font-mono text-xs`} {...props}>
+                                                            {children}
+                                                        </code>
+                                                    )
+                                                }
+                                            }}
+                                        >
+                                            {String(msg.content || '')}
+                                        </ReactMarkdown>
+                                    </div>
                                 </div>
                             </div>
+
+                            {msg.role === 'user' && (
+                                <div className="w-8 h-8 rounded-full bg-orange-100 overflow-hidden flex items-center justify-center shrink-0 mt-1">
+                                    <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Sarah&backgroundColor=ffe0b2" alt="User" className="w-full h-full object-cover" />
+                                </div>
+                            )}
                         </motion.div>
                     ))
                 )}
@@ -349,86 +407,72 @@ export default function ChatPanel() {
             </div>
 
             {/* Input Area */}
-            <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background-light via-background-light to-transparent dark:from-background-dark dark:via-background-dark pt-10 pb-6 px-4">
-                <div className="max-w-3xl mx-auto">
-                    <div className="relative group">
-                        {/* Glow effect */}
-                        <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-purple-500/30 rounded-xl opacity-0 group-focus-within:opacity-100 transition duration-500 blur"></div>
+            <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-white dark:from-[#0b1217] via-white/95 dark:via-[#0b1217]/95 to-transparent pt-12 pb-6 px-4 md:px-10 lg:px-24 xl:px-48 z-20">
+                <div className="relative bg-white dark:bg-[#151b26] border border-gray-200 dark:border-slate-700 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08),0_1px_4px_-1px_rgba(0,0,0,0.05)] dark:shadow-black/30 rounded-[2rem] p-2 flex items-center transition-shadow focus-within:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] focus-within:border-gray-300 dark:focus-within:border-slate-600 group">
 
-                        <div className="relative flex items-end gap-2 bg-white dark:bg-[#1a2c36] shadow-lg dark:shadow-black/20 rounded-xl border border-slate-200 dark:border-slate-700 overflow-visible p-2 transition-colors">
+                    {/* Left Action Buttons */}
+                    <div className="flex items-center gap-1 ml-1 pr-2 relative" ref={plusMenuRef}>
+                        <button
+                            onClick={() => setShowPlusMenu(!showPlusMenu)}
+                            className={`w-10 h-10 flex flex-col items-center justify-center rounded-full transition shrink-0 ${showPlusMenu ? 'text-primary bg-primary/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                            title="Features"
+                        >
+                            <span className="material-icons text-[24px]">add</span>
+                        </button>
 
-                            {/* Plus Menu Button */}
-                            <div className="relative flex flex-col justify-end mb-[2px]" ref={plusMenuRef}>
-                                <button
-                                    onClick={() => setShowPlusMenu(!showPlusMenu)}
-                                    className={`p-2 rounded-lg transition-colors ${showPlusMenu ? 'text-primary bg-primary/10' : 'text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                                >
-                                    <span className="material-icons text-xl">add_circle_outline</span>
-                                </button>
+                        {/* Plus Menu Popover */}
+                        {showPlusMenu && (
+                            <div className="absolute bottom-full left-0 mb-3 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 p-2 animate-in fade-in zoom-in-95 duration-100 z-50">
+                                <div className="px-3 py-2 text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">Features</div>
 
-                                {/* Plus Menu Popover */}
-                                {showPlusMenu && (
-                                    <div className="absolute bottom-full left-0 mb-3 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 p-2 animate-in fade-in zoom-in-95 duration-100 mb-2 z-50">
-                                        <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Features</div>
-
-                                        <label className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors">
-                                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isResearchMode ? 'bg-primary border-primary' : 'border-slate-400'}`}>
-                                                {isResearchMode && <span className="material-icons text-[10px] text-white font-bold">check</span>}
-                                            </div>
-                                            <input type="checkbox" className="hidden" checked={isResearchMode} onChange={() => setIsResearchMode(!isResearchMode)} />
-                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Deep Research</span>
-                                        </label>
-
-
+                                <label className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer transition-colors">
+                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isResearchMode ? 'bg-primary border-primary' : 'border-gray-300 dark:border-slate-500'}`}>
+                                        {isResearchMode && <span className="material-icons text-[10px] text-white font-bold">check</span>}
                                     </div>
-                                )}
+                                    <input type="checkbox" className="hidden" checked={isResearchMode} onChange={() => setIsResearchMode(!isResearchMode)} />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-slate-200">Deep Research</span>
+                                </label>
                             </div>
+                        )}
 
-                            <textarea
-                                className="w-full bg-transparent border-none focus:ring-0 resize-none py-3 text-slate-800 dark:text-slate-100 placeholder-slate-400 max-h-48 overflow-y-auto outline-none"
-                                placeholder={isResearchMode ? "Ask something complex (Research On)..." : "Type a message..."}
-                                rows={1}
-                                style={{ minHeight: '44px' }}
-                                value={input}
-                                onChange={e => setInput(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                            />
-
-                            <button
-                                className={`p-2 mb-[2px] rounded-lg shadow-sm hover:shadow transition-all duration-200 self-end mr-1 ${isRecording
-                                    ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
-                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-500 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400'
-                                    }`}
-                                onClick={toggleRecording}
-                                title={isRecording ? "Stop Recording" : "Start Recording"}
-                            >
-                                <span className="material-icons text-lg leading-none pt-0.5">mic</span>
-                            </button>
-
-                            <button
-                                className={`p-2 mb-[2px] rounded-lg shadow-sm hover:shadow transition-all duration-200 self-end ${!input.trim() || loading || streaming
-                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-700 dark:text-slate-500'
-                                    : 'bg-primary hover:bg-[#2390c6] text-white'
-                                    }`}
-                                onClick={() => sendMessage()}
-                                disabled={!input.trim() || loading || streaming}
-                            >
-                                <span className="material-icons text-lg leading-none pt-0.5">arrow_upward</span>
-                            </button>
-                        </div>
+                        <button
+                            onClick={toggleRecording}
+                            className={`w-10 h-10 flex flex-col items-center justify-center rounded-full transition shrink-0 ${isRecording ? 'text-white bg-red-500 animate-pulse' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                            title={isRecording ? "Stop Recording" : "Start Voice"}
+                        >
+                            <span className="material-icons text-[22px]">mic</span>
+                        </button>
                     </div>
-                    <div className="text-center mt-3 flex items-center justify-center gap-3">
-                        {/* Status Indicators */}
-                        {isResearchMode && (
-                            <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                <span className="material-icons text-[10px]">travel_explore</span> RESEARCH ON
-                            </span>
-                        )}
-                        {!isResearchMode && (
-                            <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                                AI may produce inaccurate information about people, places, or facts.
-                            </p>
-                        )}
+
+                    {/* Input Textarea */}
+                    <textarea
+                        className="flex-1 max-h-32 min-h-[24px] bg-transparent outline-none resize-none px-2 py-3 text-gray-800 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-500 text-[15px] leading-snug"
+                        placeholder={isResearchMode ? "Ask something complex (Research On)..." : "Message Jarvis..."}
+                        rows={1}
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                    />
+
+                    {/* Send Button */}
+                    <button
+                        className={`w-10 h-10 mt-auto rounded-full transition shrink-0 ml-2 mr-1 flex flex-col items-center justify-center ${!input.trim() || loading || streaming ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-primary text-white hover:bg-primary-hover shadow-sm'}`}
+                        onClick={() => sendMessage()}
+                        disabled={!input.trim() || loading || streaming}
+                    >
+                        <span className="material-icons text-xl leading-none font-bold">arrow_upward</span>
+                    </button>
+                </div>
+
+                {/* Status / Disclaimer Text */}
+                <div className="text-center mt-3 flex items-center justify-center gap-3">
+                    {isResearchMode && (
+                        <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="material-icons text-[10px]">travel_explore</span> RESEARCH ON
+                        </span>
+                    )}
+                    <div className="text-xs text-gray-400 font-medium tracking-tight">
+                        Jarvis can make mistakes. Consider checking important information.
                     </div>
                 </div>
             </div>

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
-export default function Settings() {
-    const [darkMode, setDarkMode] = useState(true);
+export default function Settings({ darkMode, setDarkMode }) {
     const [contextWindow, setContextWindow] = useState(60);
     const [language, setLanguage] = useState('English');
     const [defaultModel, setDefaultModel] = useState('GPT-4');
@@ -16,17 +15,9 @@ export default function Settings() {
     const [soundEffects, setSoundEffects] = useState(true);
     const [streamResponse, setStreamResponse] = useState(true);
 
-    // Theme Effect
-    useEffect(() => {
-        if (darkMode) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }, [darkMode]);
-
+    // No local dark mode state — controlled by global App.jsx via props
     return (
-        <div className="flex-1 flex flex-col h-[calc(100vh-theme(spacing.16))] overflow-hidden relative bg-slate-50/50 dark:bg-[#0b1217] text-slate-900 dark:text-white font-display">
+        <div className="flex-1 flex flex-col h-[calc(100vh-theme(spacing.16))] overflow-hidden relative bg-white dark:bg-[#0b1217] text-slate-900 dark:text-white font-display">
             {/* Header */}
             <header className="h-16 flex items-center justify-between px-6 lg:px-10 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#0b1217]/90 backdrop-blur-md z-10 shrink-0 sticky top-0">
                 <div className="flex items-center gap-3">

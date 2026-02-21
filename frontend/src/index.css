@@ -1,15 +1,17 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-display: "Inter", sans-serif;
-  --color-primary: #2badee;
-  --color-background-light: #f6f7f8;
-  --color-background-dark: #101c22;
+  --color-primary: #00c2ff;
+  --color-primary-hover: #0bb7ea;
+  --color-sidebar: #f9fafb;
 }
 
 @layer base {
   body {
-    @apply font-display text-slate-800 dark:text-slate-100 bg-background-light dark:bg-background-dark;
+    @apply font-display text-slate-900 bg-white antialiased;
   }
 }
 

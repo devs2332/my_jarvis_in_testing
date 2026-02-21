@@ -83,7 +83,7 @@ export default function HistorySearch() {
 
 
     return (
-        <div className="flex-1 flex flex-col h-[calc(100vh-theme(spacing.16))] relative bg-slate-50/50 dark:bg-[#0b1217] font-display">
+        <div className="flex-1 flex flex-col h-[calc(100vh-theme(spacing.16))] relative bg-white dark:bg-[#0b1217] font-display text-slate-900 dark:text-slate-100">
             {/* Header */}
             <header className="flex items-center justify-between px-8 py-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b1217] z-10 shrink-0">
                 <div className="flex items-center gap-3">
