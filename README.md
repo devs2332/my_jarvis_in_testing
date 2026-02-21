@@ -138,7 +138,8 @@ The React dashboard provides three views:
 | `/api/memory` | `GET` | List stored memories |
 | `/api/memory/search?q=` | `GET` | Semantic similarity search |
 | `/api/facts` | `GET` | Key-value facts |
-| `/api/conversations` | `GET` | Conversation history |
+| `/api/history` | `GET` | Conversation history |
+| `/api/trash` | `GET` | View deleted items |
 
 ## 📁 Project Structure
 
@@ -158,13 +159,15 @@ jarvis-ai/
 │   ├── tools.py           # Unified tool registry
 │   └── search.py          # DuckDuckGo web search
 ├── frontend/               # React.js dashboard
-│   ├── src/App.jsx        # Main dashboard (Chat, KB, Status)
+│   ├── src/App.jsx        # Main dashboard routing
+│   ├── src/components/    # UI components (ChatPanel, KnowledgeBase, Settings, History, Trash)
 │   ├── src/index.css      # Dark theme design system
 │   └── vite.config.js     # Vite + API proxy config
 ├── voice/                  # Voice pipeline
-│   ├── stt.py             # Speech-to-text (Whisper)
-│   ├── tts.py             # Text-to-speech (Edge TTS)
-│   └── wake_word.py       # "Jarvis" wake word detection
+│   ├── stt_engine.py      # Speech-to-text (Whisper/Groq/SpeechBrain)
+│   ├── tts_engine.py      # Text-to-speech (Edge TTS)
+│   ├── vad_engine.py      # Voice Activity Detection
+│   └── voice_manager.py   # Voice pipeline orchestrator
 ├── vision/                 # Computer vision
 │   ├── screen_reader.py   # Screen OCR capture
 │   ├── image_analysis.py  # Image analysis
