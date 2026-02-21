@@ -29,6 +29,9 @@
 | 🌐 **FastAPI Backend** | REST + WebSocket API with full CORS support |
 | 🎤 **Voice Interface** | Continuous listening (VAD) → STT (Groq/Whisper/SpeechBrain) → TTS pipeline |
 | 💬 **Multi-LLM Support** | Groq, OpenAI, Mistral — switch with one config change |
+| 🌍 **Bilingual Mode** | Strict English or Hindi language responses |
+| 🚀 **Dynamic Modes** | Switch between Fast Mode (speed) and Deep Research Mode (complex queries) |
+| ⚙️ **Extended UI** | User profiles, chat history search, and settings management |
 | 🔍 **Web Search** | DuckDuckGo integration for real-time information |
 | 🛠️ **Tool System** | Extensible registry for browser, file, and system tools |
 | 📋 **Task Planner** | LLM-powered multi-step task decomposition & execution |
