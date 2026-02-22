@@ -5,13 +5,13 @@ import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
 import { postJSON, fetchJSON } from '../utils/api';
 
-const AVAILABLE_MODELS = [
+const FALLBACK_MODELS = [
     { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai', model: 'gpt-4o' },
     { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai', model: 'gpt-4o-mini' },
-    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'google', model: 'gemini-1.5-flash' },
+    { id: 'gemini-flash', name: 'Gemini 1.5 Flash', provider: 'google', model: 'gemini-1.5-flash' },
     { id: 'mistral-large', name: 'Mistral Large', provider: 'mistral', model: 'mistral-large-latest' },
     { id: 'llama-3-groq', name: 'Llama 3 (Groq)', provider: 'groq', model: 'llama-3.1-8b-instant' },
-    { id: 'gpt-oss-120b', name: 'GPT-OSS 120B (Free)', provider: 'openrouter', model: 'openai/gpt-oss-120b' },
+    { id: 'gpt-oss-openrouter', name: 'GPT-OSS 120B (Free)', provider: 'openrouter', model: 'openai/gpt-oss-120b' },
     { id: 'gpt-oss-nvidia', name: 'GPT-OSS 120B (NVIDIA)', provider: 'nvidia', model: 'openai/gpt-oss-120b' },
 ];
 
@@ -27,11 +27,12 @@ export default function ChatPanel() {
     const [loading, setLoading] = useState(false);
     const [streaming, setStreaming] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
+    const [availableModels, setAvailableModels] = useState(FALLBACK_MODELS);
 
     // Feature State
-    const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[4]); // Default to Groq (Index 4)
-    const [isResearchMode, setIsResearchMode] = useState(false);
-    const [language, setLanguage] = useState('English'); // New Language State
+    const [selectedModel, setSelectedModel] = useState(FALLBACK_MODELS[4]); // Default to Groq
+    const [searchMode, setSearchMode] = useState('none'); // 'none' | 'web_search' | 'deep_research'
+    const [language, setLanguage] = useState('English');
 
     // UI State
     const [showModelMenu, setShowModelMenu] = useState(false);
@@ -45,6 +46,25 @@ export default function ChatPanel() {
     const modelMenuRef = useRef(null);
     const languageMenuRef = useRef(null);
     const recognitionRef = useRef(null);
+
+    // Audio Streaming Refs
+    const audioContextRef = useRef(null);
+    const mediaStreamRef = useRef(null);
+    const processorRef = useRef(null);
+
+    // Fetch models from backend
+    useEffect(() => {
+        fetchJSON('/api/models')
+            .then(data => {
+                if (data.models && data.models.length > 0) {
+                    setAvailableModels(data.models);
+                    // Try to keep current selection, or default to Groq-like
+                    const groq = data.models.find(m => m.provider === 'groq');
+                    if (groq) setSelectedModel(groq);
+                }
+            })
+            .catch(err => console.warn('Could not fetch models from backend, using fallback:', err));
+    }, []);
 
     // Calculate display messages (Local messages OR History)
     // CRITICAL: This variable must be defined before use
@@ -154,6 +174,9 @@ export default function ChatPanel() {
                         setMessages(prev => [...prev, { role: 'user', content: data.text, time: new Date() }]);
                     } else if (data.type === 'info') {
                         console.log("Server Info:", data.text);
+                    } else if (data.type === 'audio') {
+                        const audio = new Audio("data:audio/mp3;base64," + data.data);
+                        audio.play().catch(e => console.error("Audio play failed:", e));
                     }
                 } catch (e) {
                     console.error("WS Message Parse Error", e);
@@ -175,19 +198,68 @@ export default function ChatPanel() {
     }, []);
 
     // Toggle Backend Voice Manager
-    const toggleRecording = () => {
+    const toggleRecording = async () => {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
             alert("Waiting for server connection to activate microphone...");
             return;
         }
 
-        const newState = !isRecording;
-        setIsRecording(newState);
+        if (!isRecording) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaStreamRef.current = stream;
 
-        wsRef.current.send(JSON.stringify({
-            type: "voice_toggle",
-            active: newState
-        }));
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                audioContextRef.current = audioContext;
+
+                const source = audioContext.createMediaStreamSource(stream);
+                const processor = audioContext.createScriptProcessor(4096, 1, 1);
+                processorRef.current = processor;
+
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+
+                processor.onaudioprocess = (e) => {
+                    const floatData = e.inputBuffer.getChannelData(0);
+                    const intData = new Int16Array(floatData.length);
+                    for (let i = 0; i < floatData.length; i++) {
+                        const s = Math.max(-1, Math.min(1, floatData[i]));
+                        intData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+                    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                        wsRef.current.send(intData.buffer);
+                    }
+                };
+
+                setIsRecording(true);
+                wsRef.current.send(JSON.stringify({
+                    type: "voice_toggle",
+                    active: true
+                }));
+            } catch (err) {
+                console.error("Error accessing microphone:", err);
+                alert("Could not access microphone.");
+            }
+        } else {
+            if (processorRef.current) {
+                processorRef.current.disconnect();
+                processorRef.current = null;
+            }
+            if (audioContextRef.current) {
+                audioContextRef.current.close();
+                audioContextRef.current = null;
+            }
+            if (mediaStreamRef.current) {
+                mediaStreamRef.current.getTracks().forEach(track => track.stop());
+                mediaStreamRef.current = null;
+            }
+
+            setIsRecording(false);
+            wsRef.current.send(JSON.stringify({
+                type: "voice_toggle",
+                active: false
+            }));
+        }
     };
 
     // Send Message Handler
@@ -209,7 +281,8 @@ export default function ChatPanel() {
 
         const payload = {
             message: userMsg,
-            research_mode: isResearchMode,
+            search_mode: searchMode,
+            research_mode: searchMode === 'deep_research',
             provider: selectedModel.provider,
             model: selectedModel.model,
             language: language
@@ -229,7 +302,7 @@ export default function ChatPanel() {
             }
             setLoading(false);
         }
-    }, [input, loading, streaming, isResearchMode, selectedModel, chatId, navigate]);
+    }, [input, loading, streaming, searchMode, selectedModel, chatId, navigate]);
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -254,7 +327,7 @@ export default function ChatPanel() {
                     {showModelMenu && (
                         <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.15)] border border-gray-100 dark:border-slate-700 py-2 animate-in fade-in zoom-in-95 duration-100 font-display z-50">
                             <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Select Model</div>
-                            {AVAILABLE_MODELS.map(m => (
+                            {availableModels.map(m => (
                                 <button
                                     key={m.id}
                                     onClick={() => {
@@ -422,15 +495,29 @@ export default function ChatPanel() {
 
                         {/* Plus Menu Popover */}
                         {showPlusMenu && (
-                            <div className="absolute bottom-full left-0 mb-3 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 p-2 animate-in fade-in zoom-in-95 duration-100 z-50">
-                                <div className="px-3 py-2 text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">Features</div>
+                            <div className="absolute bottom-full left-0 mb-3 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 p-2 animate-in fade-in zoom-in-95 duration-100 z-50">
+                                <div className="px-3 py-2 text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">Search Mode</div>
 
-                                <label className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer transition-colors">
-                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isResearchMode ? 'bg-primary border-primary' : 'border-gray-300 dark:border-slate-500'}`}>
-                                        {isResearchMode && <span className="material-icons text-[10px] text-white font-bold">check</span>}
+                                <label className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                                    onClick={() => setSearchMode(searchMode === 'web_search' ? 'none' : 'web_search')}
+                                >
+                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${searchMode === 'web_search' ? 'bg-primary border-primary' : 'border-gray-300 dark:border-slate-500'}`}>
+                                        {searchMode === 'web_search' && <span className="material-icons text-[10px] text-white font-bold">check</span>}
                                     </div>
-                                    <input type="checkbox" className="hidden" checked={isResearchMode} onChange={() => setIsResearchMode(!isResearchMode)} />
-                                    <span className="text-sm font-medium text-gray-700 dark:text-slate-200">Deep Research</span>
+                                    <span className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-200">
+                                        <span className="material-icons text-[16px]">search</span> Web Search
+                                    </span>
+                                </label>
+
+                                <label className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                                    onClick={() => setSearchMode(searchMode === 'deep_research' ? 'none' : 'deep_research')}
+                                >
+                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${searchMode === 'deep_research' ? 'bg-primary border-primary' : 'border-gray-300 dark:border-slate-500'}`}>
+                                        {searchMode === 'deep_research' && <span className="material-icons text-[10px] text-white font-bold">check</span>}
+                                    </div>
+                                    <span className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-200">
+                                        <span className="material-icons text-[16px]">travel_explore</span> Deep Research
+                                    </span>
                                 </label>
                             </div>
                         )}
@@ -447,7 +534,7 @@ export default function ChatPanel() {
                     {/* Input Textarea */}
                     <textarea
                         className="flex-1 max-h-32 min-h-[24px] bg-transparent outline-none resize-none px-2 py-3 text-gray-800 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-500 text-[15px] leading-snug"
-                        placeholder={isResearchMode ? "Ask something complex (Research On)..." : "Message Jarvis..."}
+                        placeholder={searchMode === 'deep_research' ? "Ask something complex (Deep Research)..." : searchMode === 'web_search' ? "Search the web..." : "Message Jarvis..."}
                         rows={1}
                         value={input}
                         onChange={e => setInput(e.target.value)}
@@ -466,9 +553,14 @@ export default function ChatPanel() {
 
                 {/* Status / Disclaimer Text */}
                 <div className="text-center mt-3 flex items-center justify-center gap-3">
-                    {isResearchMode && (
+                    {searchMode === 'web_search' && (
+                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="material-icons text-[10px]">search</span> WEB SEARCH
+                        </span>
+                    )}
+                    {searchMode === 'deep_research' && (
                         <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <span className="material-icons text-[10px]">travel_explore</span> RESEARCH ON
+                            <span className="material-icons text-[10px]">travel_explore</span> DEEP RESEARCH
                         </span>
                     )}
                     <div className="text-xs text-gray-400 font-medium tracking-tight">

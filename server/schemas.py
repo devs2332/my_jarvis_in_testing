@@ -12,6 +12,7 @@ class ChatRequest(BaseModel):
     stream: bool = False
     research_mode: bool = False
     fast_mode: bool = False
+    search_mode: str = "none"  # 'none' | 'web_search' | 'deep_research'
     language: str = "English"
     provider: Optional[str] = None
     model: Optional[str] = None

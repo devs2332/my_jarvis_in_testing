@@ -49,14 +49,18 @@ class VoiceManager:
     # Sync API (for main.py CLI usage)
     # ──────────────────────────────────────────────
 
-    def start(self, on_speech_recognized_callback):
-        """Starts the main background audio processing loop (threaded)."""
+    def start(self, on_speech_recognized_callback, mode="local"):
+        """Starts the main background audio processing loop."""
         self.on_speech_recognized = on_speech_recognized_callback
         self.is_listening = True
-        self.stream.start()
+        self.mode = mode
         
-        threading.Thread(target=self._process_loop, daemon=True).start()
-        logger.info("⚙️ Voice Manager active (sync mode).")
+        if mode == "local":
+            self.stream.start()
+            threading.Thread(target=self._process_loop, daemon=True).start()
+            logger.info("⚙️ Voice Manager active (sync local mode).")
+        else:
+            logger.info("⚙️ Voice Manager active (browser mode). Waiting for WS chunks.")
 
     def stop(self):
         """Stop listening and cleanup."""
@@ -154,3 +158,39 @@ class VoiceManager:
         text = self.stt.transcribe(audio_data)
         if text and self.on_speech_recognized:
             self.on_speech_recognized(text)
+
+    def process_browser_chunk(self, chunk_bytes):
+        """Process raw 16kHz Int16 audio from WebSocket."""
+        if not self.is_listening:
+            return
+
+        chunk = np.frombuffer(chunk_bytes, dtype=np.int16)
+        
+        # Silero VAD prefers exact 512 chunks
+        chunk_size = 512
+        for i in range(0, len(chunk), chunk_size):
+            subchunk = chunk[i:i+chunk_size]
+            if len(subchunk) < chunk_size:
+                subchunk = np.pad(subchunk, (0, chunk_size - len(subchunk)))
+
+            is_speech = self.vad.is_speech(subchunk)
+
+            if is_speech:
+                if not self.is_user_speaking:
+                    logger.debug("🗣️ VAD: Speech Started (Browser)")
+                    self.is_user_speaking = True
+                    self.interrupt_handler.handle_user_spoke()
+                    self.speech_buffer = []
+
+                self.silence_frames = 0
+                self.speech_buffer.append(subchunk)
+            
+            else:
+                if self.is_user_speaking:
+                    self.speech_buffer.append(subchunk)
+                    self.silence_frames += 1
+                    
+                    if self.silence_frames > self.silence_threshold:
+                        logger.debug("🗣️ VAD: Speech Ended (Browser)")
+                        self.is_user_speaking = False
+                        self._process_utterance()

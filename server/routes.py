@@ -40,6 +40,27 @@ async def health():
     return {"status": "ok", "service": "jarvis-ai", "version": "3.0.0"}
 
 
+# ─── Available Models ───
+
+@router.get("/api/models")
+async def get_models():
+    """Return the list of available LLM models for the frontend dropdown."""
+    from config import (
+        MODEL_GOOGLE, MODEL_GROQ, MODEL_MISTRAL,
+        MODEL_OPENROUTER, MODEL_OPENAI, MODEL_NVIDIA,
+    )
+    models = [
+        {"id": "gpt-4o", "name": "GPT-4o", "provider": "openai", "model": MODEL_OPENAI.replace("gpt-4o-mini", "gpt-4o")},
+        {"id": "gpt-4o-mini", "name": "GPT-4o Mini", "provider": "openai", "model": MODEL_OPENAI},
+        {"id": "gemini-flash", "name": "Gemini 1.5 Flash", "provider": "google", "model": MODEL_GOOGLE},
+        {"id": "mistral-large", "name": "Mistral Large", "provider": "mistral", "model": MODEL_MISTRAL},
+        {"id": "llama-3-groq", "name": "Llama 3 (Groq)", "provider": "groq", "model": MODEL_GROQ},
+        {"id": "gpt-oss-openrouter", "name": "GPT-OSS 120B (Free)", "provider": "openrouter", "model": MODEL_OPENROUTER},
+        {"id": "gpt-oss-nvidia", "name": "GPT-OSS 120B (NVIDIA)", "provider": "nvidia", "model": MODEL_NVIDIA},
+    ]
+    return {"models": models}
+
+
 # ─── Status ───
 
 @router.get("/api/status")
@@ -79,6 +100,7 @@ async def chat(req: ChatRequest, request: Request):
         req.message,
         research_mode=req.research_mode,
         fast_mode=req.fast_mode,
+        search_mode=req.search_mode,
         language=req.language,
         provider=req.provider,
         model=req.model,
@@ -127,13 +149,24 @@ async def ws_chat(websocket: WebSocket):
 
     try:
         while True:
-            data = await websocket.receive_text()
+            ws_msg = await websocket.receive()
+            
+            # Handle binary audio chunks from browser
+            if "bytes" in ws_msg and ws_msg["bytes"]:
+                if voice.is_listening:
+                    voice.process_browser_chunk(ws_msg["bytes"])
+                continue
+                
+            if "text" not in ws_msg or not ws_msg["text"]:
+                continue
+                
+            data = ws_msg["text"]
             msg = json.loads(data)
 
             # 1) Voice Toggle
             if msg.get("type") == "voice_toggle":
                 if msg.get("active"):
-                    voice.start(on_speech_recognized_callback=on_speech_recognized)
+                    voice.start(on_speech_recognized_callback=on_speech_recognized, mode="browser")
                     await websocket.send_json({"type": "info", "text": "Microphone armed."})
                 else:
                     voice.stop()
@@ -144,6 +177,7 @@ async def ws_chat(websocket: WebSocket):
             user_message = msg.get("message", "")
             research_mode = msg.get("research_mode", False)
             fast_mode = msg.get("fast_mode", False)
+            search_mode = msg.get("search_mode", "none")
             language = msg.get("language", "English")
             provider = msg.get("provider", None)
             model = msg.get("model", None)
@@ -154,7 +188,7 @@ async def ws_chat(websocket: WebSocket):
 
             await _process_chat_message(
                 user_message, websocket, agent, vm, voice,
-                research_mode, fast_mode, language, provider, model,
+                research_mode, fast_mode, search_mode, language, provider, model,
             )
 
     except WebSocketDisconnect:
@@ -168,11 +202,11 @@ async def ws_chat(websocket: WebSocket):
 async def _process_voice_command(text, websocket, agent, vm, voice):
     """Callback fired by VoiceManager when STT finishes processing an utterance."""
     await websocket.send_json({"type": "user_voice_echo", "text": text, "timestamp": time.time()})
-    await _process_chat_message(text, websocket, agent, vm, voice, False, False, "English", None, None)
+    await _process_chat_message(text, websocket, agent, vm, voice, False, False, "none", "English", None, None)
 
 
 async def _process_chat_message(user_message, websocket, agent, vm, voice,
-                                research_mode, fast_mode, language, provider, model):
+                                research_mode, fast_mode, search_mode, language, provider, model):
     """Shared core logic for handling an LLM request and streaming back over WS."""
     await websocket.send_json({"type": "thinking", "text": "Processing..."})
 
@@ -183,6 +217,7 @@ async def _process_chat_message(user_message, websocket, agent, vm, voice,
             user_message,
             research_mode=research_mode,
             fast_mode=fast_mode,
+            search_mode=search_mode,
             language=language,
             provider=provider,
             model=model,
@@ -194,6 +229,7 @@ async def _process_chat_message(user_message, websocket, agent, vm, voice,
             user_message,
             research_mode=research_mode,
             fast_mode=fast_mode,
+            search_mode=search_mode,
             language=language,
             provider=provider,
             model=model,
@@ -207,10 +243,18 @@ async def _process_chat_message(user_message, websocket, agent, vm, voice,
 
     # Speak response aloud if voice is active
     if voice and voice.is_listening:
-        if hasattr(voice.tts, "speak_async"):
-            await voice.tts.speak_async(full_response)
+        if getattr(voice, "mode", "local") == "browser":
+            if hasattr(voice.tts, "generate_audio_bytes"):
+                audio_bytes = await voice.tts.generate_audio_bytes(full_response)
+                if audio_bytes:
+                    import base64
+                    b64_audio = base64.b64encode(audio_bytes).decode('utf-8')
+                    await websocket.send_json({"type": "audio", "data": b64_audio})
         else:
-            voice.speak(full_response)
+            if hasattr(voice.tts, "speak_async"):
+                await voice.tts.speak_async(full_response)
+            else:
+                voice.speak(full_response)
 
     # Store in vector memory (single point of storage)
     if vm:

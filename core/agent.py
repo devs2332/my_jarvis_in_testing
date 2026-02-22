@@ -31,7 +31,7 @@ class Agent:
         self.tool_registry = ToolRegistry()
         logger.info("🤖 Agent initialized (vector_memory=%s)", "ON" if vector_memory else "OFF")
 
-    def run(self, user_input, research_mode=False, fast_mode=False, language="English", provider=None, model=None):
+    def run(self, user_input, research_mode=False, fast_mode=False, search_mode="none", language="English", provider=None, model=None):
         """Process user input and return a response string."""
         self.state.set("THINKING")
 
@@ -101,13 +101,13 @@ class Agent:
         # 6️⃣ Standard LLM with RAG context (fallback if no tool call)
         response = self.brain.think(
             user_input, research_mode=research_mode, fast_mode=fast_mode,
-            language=language, provider=provider, model=model,
+            search_mode=search_mode, language=language, provider=provider, model=model,
         )
         self.state.set("SPEAKING")
         return response
 
     async def run_stream(self, user_input, research_mode=False, fast_mode=False,
-                         language="English", provider=None, model=None):
+                         search_mode="none", language="English", provider=None, model=None):
         """
         Async generator that yields response tokens for WebSocket streaming.
         Delegates to brain.think_stream() for clean RAG + streaming.
@@ -127,7 +127,7 @@ class Agent:
         # Stream from Brain (single source of RAG logic)
         async for token in self.brain.think_stream(
             user_input, research_mode=research_mode, fast_mode=fast_mode,
-            language=language, provider=provider, model=model,
+            search_mode=search_mode, language=language, provider=provider, model=model,
         ):
             yield token
 

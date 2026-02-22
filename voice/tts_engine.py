@@ -96,3 +96,24 @@ class TTSEngine:
                 except:
                     pass
 
+    async def generate_audio_bytes(self, text):
+        """Generates TTS audio and returns bytes for streaming over WebSocket."""
+        if not text:
+            return b""
+        filename = f"tts_{int(asyncio.get_event_loop().time() * 1000)}_ws.mp3"
+        try:
+            communicate = edge_tts.Communicate(text, self.voice)
+            await communicate.save(filename)
+            with open(filename, "rb") as f:
+                audio_bytes = f.read()
+            return audio_bytes
+        except Exception as e:
+            logger.error(f"❌ TTS ERROR: {e}")
+            return b""
+        finally:
+            if os.path.exists(filename):
+                try:
+                    os.remove(filename)
+                except:
+                    pass
+

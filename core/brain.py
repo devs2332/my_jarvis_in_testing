@@ -39,14 +39,17 @@ class Brain:
     # Shared RAG context builder (used by think + think_stream)
     # ──────────────────────────────────────────────
 
-    def _build_rag_context(self, user_query, research_mode=False, fast_mode=False, language="English"):
+    def _build_rag_context(self, user_query, research_mode=False, fast_mode=False, search_mode="none", language="English"):
         """
         Build the full RAG context: vector memory search, web search, deep scraping, prompt.
+
+        Args:
+            search_mode: 'none' | 'web_search' | 'deep_research'
 
         Returns:
             tuple: (prompt: str, search_results: list, memory_context: list)
         """
-        logger.info(f"🤔 Thinking about: '{user_query[:50]}...' (FastMode: {fast_mode})")
+        logger.info(f"🤔 Thinking about: '{user_query[:50]}...' (SearchMode: {search_mode}, FastMode: {fast_mode})")
 
         # 1️⃣ Vector memory search (RAG retrieval) — with relevance filtering
         memory_context = []
@@ -56,26 +59,44 @@ class Brain:
             memory_context = [r for r in raw_results if r.get("distance", 1.0) < 0.8]
             logger.debug(f"Retrieved {len(memory_context)} relevant memory results (filtered from {len(raw_results)})")
 
-        # 2️⃣ Internet search
-        max_results = 5
+        # 2️⃣ Internet search — controlled by search_mode
+        search_results = []
         deep_research = False
 
-        if fast_mode:
-            max_results = 1
-            deep_research = True
+        if search_mode == "none":
+            # Pure AI chat — skip web search entirely
+            logger.debug("Search mode: none — skipping web search")
 
-        elif "top" in user_query.lower() and any(c.isdigit() for c in user_query):
-            match = re.search(r"top\s+(\d+)", user_query.lower())
-            if match:
-                max_results = int(match.group(1))
+        elif search_mode == "web_search":
+            # Web search only — no deep scraping
+            max_results = 5
+            search_results = self.search.search(user_query, max_results=max_results)
+            logger.info(f"🔍 Web Search: {len(search_results)} results")
+
+        elif search_mode == "deep_research":
+            # Deep research — web search + scrape top pages
+            max_results = 10
+            search_results = self.search.search(user_query, max_results=max_results)
+            deep_research = True
+            logger.info(f"🕵️ Deep Research: {len(search_results)} results (will scrape)")
+
+        else:
+            # Legacy fallback — use old heuristics for backward compatibility
+            max_results = 5
+            if fast_mode:
+                max_results = 1
+                deep_research = True
+            elif "top" in user_query.lower() and any(c.isdigit() for c in user_query):
+                match = re.search(r"top\s+(\d+)", user_query.lower())
+                if match:
+                    max_results = int(match.group(1))
+                    deep_research = True
+            elif "research" in user_query.lower() or "collect data" in user_query.lower() or research_mode:
+                max_results = 10
                 deep_research = True
 
-        elif "research" in user_query.lower() or "collect data" in user_query.lower() or research_mode:
-            max_results = 10
-            deep_research = True
-
-        search_results = self.search.search(user_query, max_results=max_results)
-        logger.debug(f"Retrieved {len(search_results)} search results")
+            search_results = self.search.search(user_query, max_results=max_results)
+            logger.debug(f"Retrieved {len(search_results)} search results (legacy mode)")
 
         # Deep Research: Scrape top results
         if deep_research and search_results:
@@ -117,11 +138,11 @@ class Brain:
     # Synchronous (full response)
     # ──────────────────────────────────────────────
 
-    def think(self, user_query, research_mode=False, fast_mode=False, language="English", provider=None, model=None):
+    def think(self, user_query, research_mode=False, fast_mode=False, search_mode="none", language="English", provider=None, model=None):
         """Process a user query using RAG pipeline. Returns complete response string."""
         try:
             prompt, search_results, memory_context = self._build_rag_context(
-                user_query, research_mode, fast_mode, language
+                user_query, research_mode, fast_mode, search_mode, language
             )
 
             # Ask LLM
@@ -165,14 +186,14 @@ class Brain:
     # ──────────────────────────────────────────────
 
     async def think_stream(self, user_query, research_mode=False, fast_mode=False,
-                           language="English", provider=None, model=None):
+                           search_mode="none", language="English", provider=None, model=None):
         """
         Async generator that yields response tokens for streaming.
         Uses the same RAG pipeline as think() but streams the LLM output.
         """
         try:
             prompt, search_results, memory_context = self._build_rag_context(
-                user_query, research_mode, fast_mode, language
+                user_query, research_mode, fast_mode, search_mode, language
             )
 
             # Stream from LLM
