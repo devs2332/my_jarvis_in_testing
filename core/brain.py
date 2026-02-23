@@ -11,6 +11,7 @@ import logging
 import re
 from core.search import InternetSearch
 from core.reasoning import ReasoningEngine
+from core.google_dorking import QueryDorker
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,8 @@ class Brain:
         self.vector_memory = vector_memory
         self.search = InternetSearch()
         self.reasoning = ReasoningEngine()
-        logger.info("🧠 Brain initialized (vector_memory=%s)", "ON" if vector_memory else "OFF")
+        self.dorker = QueryDorker()
+        logger.info("🧠 Brain initialized (vector_memory=%s, dorking=ON)", "ON" if vector_memory else "OFF")
 
     # ──────────────────────────────────────────────
     # Shared RAG context builder (used by think + think_stream)
@@ -68,17 +70,22 @@ class Brain:
             logger.debug("Search mode: none — skipping web search")
 
         elif search_mode == "web_search":
-            # Web search only — no deep scraping
-            max_results = 5
-            search_results = self.search.search(user_query, max_results=max_results)
+            # Web search with Google dorking for better accuracy
+            dorked_queries = self.dorker.dork(user_query, mode="web_search")
+            dorked_query = dorked_queries[0]  # Single optimised query
+            logger.info(f"🔍 Web Search (dorked): '{dorked_query}'")
+            search_results = self.search.search(dorked_query, max_results=5)
             logger.info(f"🔍 Web Search: {len(search_results)} results")
 
         elif search_mode == "deep_research":
-            # Deep research — web search + scrape top pages
-            max_results = 10
-            search_results = self.search.search(user_query, max_results=max_results)
+            # Deep research — multi-query dorking + scrape top pages
+            dorked_queries = self.dorker.dork(user_query, mode="deep_research")
+            logger.info(f"🕵️ Deep Research (dorked): {dorked_queries}")
+            search_results = self.search.search_multiple(
+                dorked_queries, max_results_per_query=5
+            )
             deep_research = True
-            logger.info(f"🕵️ Deep Research: {len(search_results)} results (will scrape)")
+            logger.info(f"🕵️ Deep Research: {len(search_results)} unique results (will scrape)")
 
         else:
             # Legacy fallback — use old heuristics for backward compatibility
@@ -129,6 +136,7 @@ class Brain:
             chat_history=chat_history,
             fast_mode=fast_mode,
             research_mode=research_mode,
+            search_mode=search_mode,
             language=language,
         )
 

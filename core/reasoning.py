@@ -6,6 +6,7 @@ using search results, memory context, chat history, and user queries.
 """
 
 import logging
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class ReasoningEngine:
 
     def build_prompt(self, user_query, search_results, memory_context=None,
                      chat_history=None, fast_mode=False, research_mode=False,
-                     language="English"):
+                     search_mode="none", language="English"):
         """
         Build a structured reasoning prompt from query, search results, history, and memory.
 
@@ -90,59 +91,145 @@ class ReasoningEngine:
         )
         if not web_context:
             web_context = "No internet search results available."
+        else:
+            web_context += (
+                "\n\n(Note: These results were gathered using targeted search operators "
+                "for higher accuracy. Prioritise information from authoritative and "
+                "official sources like documentation sites, research papers, and "
+                "well-known publications.)"
+            )
 
         prompt += f"\nInternet Search Results:\n{web_context}\n"
 
         # ── Formatting instructions (mode-specific) ──
         prompt += "\nFORMATTING RULES (you MUST follow these exactly):\n"
 
-        if research_mode:
-            prompt += """
+        if search_mode == "deep_research" or research_mode:
+            deep_target = random.randint(200, 300)
+            prompt += f"""
 You are in **DEEP RESEARCH MODE**. Follow these rules strictly:
-- Structure your answer as a well-organized research report
-- Start with a one-line **bold summary** of the answer
-- Use markdown `## Section Headers` to organize major topics
-- Use `###` for sub-sections when needed
-- Use bullet points (- item) and numbered lists (1. item) for details
-- Bold (**word**) key terms, names, and important concepts
-- Include specific data points, numbers, dates, and statistics when available
-- If comparing items, use a markdown table with | Column | Column |
-- End with a `## Summary` or `## Key Takeaways` section with 3-5 bullet points
-- Cite sources inline like: (Source: website name)
-- Aim for a comprehensive, detailed answer — at least 300-500 words
+- You MUST write a DETAILED and COMPREHENSIVE answer.
+- Your answer MUST be exactly **{deep_target} lines** long. This is MANDATORY.
+- Structure your answer as a well-organized research report.
+- Start with a one-line **bold summary** of the answer.
+- Use markdown `## Section Headers` to organize major topics.
+- Use `### Sub-sections` to break down topics further.
+- Use bullet points (- item) and numbered lists (1. item) extensively.
+- Bold (**word**) key terms, names, and important concepts.
+- Include ALL specific data points, numbers, dates, statistics, and facts you can find.
+- If comparing items, use markdown tables with | Column | Column |.
+- Provide multiple perspectives, pros/cons, and detailed analysis.
+- Include examples, use cases, and real-world applications.
+- Add a `## Detailed Analysis` section with in-depth exploration.
+- Add a `## Comparison` section with tables if applicable.
+- Add a `## Practical Guide` or `## How-To` section if relevant.
+- End with a `## Summary` or `## Key Takeaways` section with 5-10 bullet points.
+- Cite sources inline like: (Source: website name).
+- DO NOT be brief. DO NOT summarize. Be as detailed and exhaustive as possible.
+- If you run out of search context, use your own knowledge to fill in details.
+- Remember: AIM FOR {deep_target} lines. This is a comprehensive research report.
 
 Example structure:
 **One-line summary of the topic.**
 
 ## Overview
-Brief introduction...
+Detailed introduction covering background, history, and context...
 
 ## Key Findings
-- **Point 1**: Detail...
-- **Point 2**: Detail...
+### Finding 1
+- **Point 1**: Extensive detail with data and examples...
+- **Point 2**: More detail...
+
+### Finding 2
+...
 
 ## Detailed Analysis
+In-depth exploration with multiple paragraphs...
+
+## Comparison Table
+| Feature | Option A | Option B |
+|---------|----------|----------|
+| ...     | ...      | ...      |
+
+## Practical Applications
 ...
 
 ## Summary
 - Takeaway 1
 - Takeaway 2
+- Takeaway 3
+- Takeaway 4
+- Takeaway 5
+"""
+        elif search_mode == "web_search":
+            web_target = random.randint(100, 150)
+            prompt += f"""
+You are in **WEB SEARCH MODE**. Follow these rules strictly:
+- You MUST write a MODERATELY DETAILED answer with good depth.
+- Your answer MUST be exactly **{web_target} lines** long. This is MANDATORY.
+- Structure your answer clearly with markdown formatting.
+- Start with a one-line **bold summary** of the answer.
+- Use markdown `## Section Headers` to organize into 3-5 sections.
+- Use `###` for sub-sections when needed.
+- Use bullet points (- item) and numbered lists (1. item) for details.
+- Bold (**word**) key terms, names, and important concepts.
+- Include specific data points, numbers, dates, and statistics from search results.
+- If comparing items, use a markdown table with | Column | Column |.
+- End with a `## Summary` section with 3-5 key takeaways.
+- Cite sources inline like: (Source: website name).
+- Be thorough — cover all major aspects of the topic.
+- Remember: AIM FOR {web_target} lines. Give a well-rounded, informative answer.
+
+Example structure:
+**One-line summary of the topic.**
+
+## Overview
+Introduction with key context...
+
+## Key Points
+- **Point 1**: Detail with data...
+- **Point 2**: More detail...
+
+## Analysis
+Deeper exploration of the topic...
+
+## Summary
+- Takeaway 1
+- Takeaway 2
+- Takeaway 3
 """
         else:
-            prompt += """
-You are in **FAST MODE** (default). Follow these rules strictly:
-- Give a VERY SHORT answer: 2-4 sentences maximum
-- Use bullet points (•) for any list items
-- Start directly with the answer — NO introduction, NO preamble
-- Do NOT use headers or sections
-- Do NOT say "Based on the search results" or similar filler
-- If the answer is a single fact, give just that fact in one sentence
-- Bold (**word**) only the most critical keyword in your answer
+            default_target = random.randint(6, 60)
+            prompt += f"""
+You are in **DEFAULT AI CHAT MODE** (no search). Follow these rules strictly:
+- Write a clear, helpful answer with basic detail.
+- Your answer should be exactly **{default_target} lines** long.
+- For simple factual questions, a short 6-15 line answer is fine.
+- For explanations or how-to questions, write 30-50 lines.
+- For complex topics, write up to 60 lines.
+- Start directly with the answer — NO filler phrases like "Based on my knowledge".
+- Use markdown formatting when helpful (bold, bullets, headers for longer answers).
+- Bold (**word**) key terms and important concepts.
+- Use bullet points for lists and key points.
+- Use code blocks with language tags for any code examples.
+- Be direct, concise, and useful.
+- Match your answer length to the complexity of the question.
 
-Example format:
-**Python** is a high-level programming language.
-• Created by Guido van Rossum in 1991
-• Used for web dev, AI/ML, automation
+Example format for a simple question:
+**Python** is a high-level programming language created by Guido van Rossum.
+- Used for web development, AI/ML, automation, and data science
+- Known for its readable syntax and large ecosystem
+
+Example format for a complex question:
+## Overview
+Explanation of the topic...
+
+## Key Points
+- **Point 1**: Detail...
+- **Point 2**: Detail...
+
+## Summary
+- Key takeaway
 """
 
         if language and language.lower() == "hindi":
