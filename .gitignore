@@ -82,3 +82,9 @@ models/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ===== Infrastructure =====
+postgres_data/
+redis_data/
+chroma_data/
+

@@ -16,7 +16,7 @@ LLM_PROVIDER = "nvidia"
 STT_ENGINE = "speechbrain"
 
 MODEL_GOOGLE = "gemini-1.5-flash"
-MODEL_GROQ = "llama-3.1-8b-instant"
+MODEL_GROQ = "openai/gpt-oss-120b"
 MODEL_MISTRAL = "mistral-large-latest"
 MODEL_OPENROUTER = "openai/gpt-oss-120b"
 MODEL_OPENAI = "gpt-4o-mini"   # fast + cheap

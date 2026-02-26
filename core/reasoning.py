@@ -236,6 +236,8 @@ Explanation of the topic...
             prompt += "\n- ANSWER IN PURE HINDI (Devanagari script).\n"
             prompt += "- Do not use mixed Hinglish.\n"
             prompt += "- Use technical terms in English if needed, but explain in Hindi.\n"
+        else:
+            prompt += "\n- You MUST answer in ENGLISH only. Do NOT use any other language.\n"
 
         prompt += "\nANSWER:\n"
 

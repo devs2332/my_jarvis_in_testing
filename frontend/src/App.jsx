@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { fetchJSON, postJSON } from './utils/api';
@@ -13,9 +13,24 @@ import HistorySearch from './components/HistorySearch'
 import Trash from './components/Trash'
 import UserProfile from './components/UserProfile'
 
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import Dashboard from './pages/Dashboard'
+import Subscription from './pages/Subscription'
+
+// ─── Protected Route Component ───
+const ProtectedRoute = ({ children }) => {
+    const { user, loading } = useAuth();
+    if (loading) return <div className="flex h-screen items-center justify-center bg-[#0b1217] text-white">Loading Auth...</div>;
+    if (!user) return <Navigate to="/login" replace />;
+    return children;
+};
+
 // ─── Main App Component ───
 function AppContent() {
     const location = useLocation();
+    const { user } = useAuth();
     const [connected, setConnected] = useState(false)
 
     // ─── Dark Mode (Global, Persisted) ───
@@ -46,10 +61,13 @@ function AppContent() {
 
     // ─── WebSocket & Init ───
     useEffect(() => {
+        // Only connect if logged in natively
+        if (!user) return;
+
         const connectWebSocket = () => {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            // Use window.location.host to respect the proxy
-            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            const token = localStorage.getItem('jarvis_token');
+            const wsUrl = `${protocol}//${window.location.host}/ws/chat?token=${token || ''}`;
 
             ws.current = new WebSocket(wsUrl);
 
@@ -83,7 +101,7 @@ function AppContent() {
         loadHistory();
 
         return () => ws.current?.close();
-    }, []);
+    }, [user]);
 
     const handleWebSocketMessage = (data) => {
         if (data.type === 'status_update') {
@@ -106,7 +124,7 @@ function AppContent() {
 
     const loadHistory = async () => {
         try {
-            const history = await fetchJSON('/api/history');
+            const history = await fetchJSON('/api/v1/history');
             // Transform if necessary, or just set
             // API likely returns list of conversations, for this simple view we might just load current?
             // For now assuming empty or we just start fresh in this view.
@@ -130,7 +148,7 @@ function AppContent() {
 
         try {
             // We use standard fetch for sending, WS for streaming response
-            await postJSON('/api/chat', { message: input, id: assistantMsgId });
+            await postJSON('/api/v1/chat', { message: input, id: assistantMsgId });
         } catch (err) {
             console.error("Send failed", err);
             setMessages(prev => [...prev, { role: 'system', content: `Error: ${err.message}` }]);
@@ -159,35 +177,48 @@ function AppContent() {
 
             <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0b1217] relative transition-all duration-300">
                 <Routes>
+                    {/* Public Routes */}
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+
+                    {/* Protected Routes */}
                     <Route path="/" element={
-                        <ChatPanel
-                            messages={messages}
-                            input={input}
-                            setInput={setInput}
-                            sendMessage={sendMessage}
-                            isTyping={isTyping}
-                            messagesEndRef={messagesEndRef}
-                        />
+                        <ProtectedRoute>
+                            <ChatPanel
+                                messages={messages}
+                                input={input}
+                                setInput={setInput}
+                                sendMessage={sendMessage}
+                                isTyping={isTyping}
+                                messagesEndRef={messagesEndRef}
+                            />
+                        </ProtectedRoute>
                     } />
                     {/* Route for loading specific history chats */}
                     <Route path="/c/:chatId" element={
-                        <ChatPanel
-                            messages={messages}
-                            input={input}
-                            setInput={setInput}
-                            sendMessage={sendMessage}
-                            isTyping={isTyping}
-                            messagesEndRef={messagesEndRef}
-                        />
+                        <ProtectedRoute>
+                            <ChatPanel
+                                messages={messages}
+                                input={input}
+                                setInput={setInput}
+                                sendMessage={sendMessage}
+                                isTyping={isTyping}
+                                messagesEndRef={messagesEndRef}
+                            />
+                        </ProtectedRoute>
                     } />
-                    <Route path="/knowledge" element={<KnowledgeBase />} />
-                    <Route path="/status" element={<SystemStatus status={systemStatus} />} />
+                    <Route path="/knowledge" element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
+                    <Route path="/status" element={<ProtectedRoute><SystemStatus status={systemStatus} /></ProtectedRoute>} />
 
-                    {/* New Routes */}
-                    <Route path="/settings" element={<Settings darkMode={darkMode} setDarkMode={setDarkMode} />} />
-                    <Route path="/history" element={<HistorySearch />} />
-                    <Route path="/trash" element={<Trash />} />
-                    <Route path="/profile" element={<UserProfile />} />
+                    {/* New Enterprise Routes */}
+                    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                    <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+
+                    {/* Utilities */}
+                    <Route path="/settings" element={<ProtectedRoute><Settings darkMode={darkMode} setDarkMode={setDarkMode} /></ProtectedRoute>} />
+                    <Route path="/history" element={<ProtectedRoute><HistorySearch /></ProtectedRoute>} />
+                    <Route path="/trash" element={<ProtectedRoute><Trash /></ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
                 </Routes>
             </main>
         </div>
@@ -233,9 +264,11 @@ class ErrorBoundary extends React.Component {
 export default function App() {
     return (
         <ErrorBoundary>
-            <BrowserRouter>
-                <AppContent />
-            </BrowserRouter>
+            <AuthProvider>
+                <BrowserRouter>
+                    <AppContent />
+                </BrowserRouter>
+            </AuthProvider>
         </ErrorBoundary>
     );
 }

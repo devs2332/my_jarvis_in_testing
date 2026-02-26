@@ -180,7 +180,7 @@ class Brain:
                 "fast_mode": fast_mode,
                 "research_mode": research_mode,
                 "language": language,
-                "response_length": len(answer),
+                "response_length": len(str(answer)) if answer else 0,
             })
 
             return answer
@@ -243,7 +243,7 @@ class Brain:
                     "fast_mode": fast_mode,
                     "research_mode": research_mode,
                     "language": language,
-                    "response_length": len(full_response),
+                    "response_length": len(str(full_response)) if full_response else 0,
                 })
 
         except Exception as e:

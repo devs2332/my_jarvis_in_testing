@@ -8,7 +8,7 @@ export default function KnowledgeBase() {
     const [searched, setSearched] = useState(false);
 
     useEffect(() => {
-        fetchJSON('/api/memory?limit=20')
+        fetchJSON('/api/v1/memory?limit=20')
             .then(data => setRecent(data.memories || []))
             .catch(() => { });
     }, []);
@@ -17,7 +17,7 @@ export default function KnowledgeBase() {
         if (!query.trim()) return;
         setSearched(true);
         try {
-            const data = await fetchJSON(`/api/memory/search?q=${encodeURIComponent(query)}&top_k=10`);
+            const data = await fetchJSON(`/api/v1/memory/search?q=${encodeURIComponent(query)}&top_k=10`);
             setResults(data.results || []);
         } catch {
             setResults([]);

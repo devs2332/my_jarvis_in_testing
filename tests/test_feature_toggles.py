@@ -18,23 +18,31 @@ class TestFeatureToggles(unittest.TestCase):
         
         # Mock Search
         self.agent.brain.search = MagicMock()
+        # Mock both single and multiple search methods
         self.agent.brain.search.search.return_value = [{'href': 'http://example.com', 'title': 'Example', 'body': 'Content'}]
+        self.agent.brain.search.search_multiple.return_value = [{'href': 'http://example.com', 'title': 'Example', 'body': 'Content'}]
 
     def test_language_hindi_instruction(self):
-        with patch.object(self.agent.brain.reasoning, 'build_prompt', return_value="Base Prompt"):
-            self.agent.run("Hello", language="hi")
+        with patch.object(self.agent.brain.reasoning, 'build_prompt', return_value="Base Prompt") as mock_build_prompt:
+            # We must exhaust the async generator for the call to be registered properly
+            import asyncio
+            async def run_test():
+                async for _ in self.agent.run_stream("hindimode: Hello"):
+                    pass
+            asyncio.run(run_test())
             
-            call_args = self.agent.llm.generate.call_args
-            prompt_used = call_args[0][0]
-            self.assertIn("IMPORTANT: Please answer the above question in Hindi", prompt_used)
+            # Verify the language argument was passed to build_prompt
+            called_kwargs = mock_build_prompt.call_args[1]
+            self.assertEqual(called_kwargs.get("language"), "Hindi")
 
     def test_research_mode_triggers_scraping(self):
         with patch('tools.browser.scrape_url') as mock_scrape:
             mock_scrape.return_value = "Scraped Content"
             
-            self.agent.run("tell me about cats", research_mode=True)
+            self.agent.run("tell me about cats", search_mode="deep_research")
             
-            self.agent.brain.search.search.assert_called_with("tell me about cats", max_results=10)
+            # Since deep_research uses dorking and search_multiple
+            assert self.agent.brain.search.search_multiple.called
             mock_scrape.assert_called()
 
 if __name__ == '__main__':

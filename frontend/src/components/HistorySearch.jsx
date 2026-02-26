@@ -28,7 +28,7 @@ export default function HistorySearch() {
     const loadHistory = async () => {
         setIsLoading(true);
         try {
-            const data = await fetchJSON('/api/history?limit=100');
+            const data = await fetchJSON('/api/v1/history?limit=100');
             // Transform data if needed, backend returns list of {user, jarvis, id, timestamp}
             const formatted = (data.conversations || []).map(item => ({
                 id: item.id || Math.random().toString(),
@@ -59,7 +59,7 @@ export default function HistorySearch() {
         e.stopPropagation();
         if (window.confirm("Move this conversation to trash?")) {
             try {
-                await deleteJSON(`/api/history/${id}`);
+                await deleteJSON(`/api/v1/history/${id}`);
                 setHistoryItems(prev => prev.filter(item => item.id !== id));
             } catch (error) {
                 console.error("Delete failed", error);

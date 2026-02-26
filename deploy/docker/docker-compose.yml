@@ -1,0 +1,85 @@
+version: "3.9"
+
+services:
+  # ── Backend API ─────────────────────────────────────
+  backend:
+    build:
+      context: ../../
+      dockerfile: deploy/docker/Dockerfile.backend
+    container_name: jarvis-backend
+    env_file: ../../.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - chroma_data:/app/data/chroma
+    restart: unless-stopped
+    networks:
+      - jarvis-net
+
+  # ── Frontend ────────────────────────────────────────
+  frontend:
+    build:
+      context: ../../
+      dockerfile: deploy/docker/Dockerfile.frontend
+    container_name: jarvis-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - jarvis-net
+
+  # ── PostgreSQL ──────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: jarvis-postgres
+    environment:
+      POSTGRES_USER: jarvis
+      POSTGRES_PASSWORD: jarvis_secret
+      POSTGRES_DB: jarvis_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U jarvis -d jarvis_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - jarvis-net
+
+  # ── Redis ───────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: jarvis-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - jarvis-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  chroma_data:
+
+
+networks:
+  jarvis-net:
+    driver: bridge

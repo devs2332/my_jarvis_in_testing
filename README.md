@@ -102,17 +102,27 @@ LLM_PROVIDER = "groq"  # or "openai" or "mistral"
 
 ### 3. Run
 
-**Option A — Dashboard Mode** (recommended):
+**Option A — Enterprise Dashboard Mode** (recommended):
+
+First, start the required Postgres and Redis databases:
+```bash
+docker-compose -f deploy/docker/docker-compose.yml up postgres redis -d
+```
+
+Then, start the FastAPI Backend:
 ```bash
 # Terminal 1: Backend
-python -m uvicorn server.app:app --reload --port 8080
+python -m uvicorn server.app.main:app --reload --port 8000
+```
 
+Finally, start the React Frontend:
+```bash
 # Terminal 2: Frontend
 cd frontend && npm run dev
 ```
 Open **http://localhost:5173**
 
-**Option B — Voice Mode**:
+**Option B — Voice Mode** (CLI interface):
 ```bash
 python main.py
 ```
@@ -145,39 +155,22 @@ The React dashboard provides three views:
 
 ```
 jarvis-ai/
-├── server/                 # FastAPI backend
-│   ├── app.py             # Application + middleware
-│   └── routes.py          # REST + WebSocket endpoints
-├── core/                   # AI engine
-│   ├── agent.py           # Orchestrator (sync + async streaming)
-│   ├── brain.py           # RAG pipeline: search → memory → LLM
-│   ├── vector_memory.py   # ChromaDB semantic vector store
-│   ├── llm_client.py      # Multi-provider LLM (Groq/OpenAI/Mistral)
-│   ├── memory.py          # JSON key-value memory
-│   ├── reasoning.py       # Context-aware prompt builder
-│   ├── planner.py         # Multi-step task planner
-│   ├── tools.py           # Unified tool registry
-│   └── search.py          # DuckDuckGo web search
+├── core/                   # UNCHANGED — AI brain, agent, LLM, search
+├── server/                 # UPGRADED — Enterprise backend
+│   ├── app/                #   ├── REST API, Auth, Billing, Middleware
+│   ├── ai/                 #   ├── LangChain agent, memory, token tracking
+│   ├── tools/              #   ├── Tool registry + permissions
+│   └── legacy_routes.py    #   └── Legacy WebSocket streaming endpoints
 ├── frontend/               # React.js dashboard
-│   ├── src/App.jsx        # Main dashboard routing
-│   ├── src/components/    # UI components (ChatPanel, KnowledgeBase, Settings, History, Trash)
-│   ├── src/index.css      # Dark theme design system
-│   └── vite.config.js     # Vite + API proxy config
-├── voice/                  # Voice pipeline
-│   ├── stt_engine.py      # Speech-to-text (Whisper/Groq/SpeechBrain)
-│   ├── tts_engine.py      # Text-to-speech (Edge TTS)
-│   ├── vad_engine.py      # Voice Activity Detection
-│   └── voice_manager.py   # Voice pipeline orchestrator
-├── vision/                 # Computer vision
-│   ├── screen_reader.py   # Screen OCR capture
-│   ├── image_analysis.py  # Image analysis
-│   └── camera_analysis.py # Camera feed analysis
-├── tools/                  # Action tools
-│   ├── browser.py         # Web browsing
-│   ├── files.py           # File operations
-│   └── system.py          # System commands
-├── config.py              # All configuration
-├── main.py                # Voice mode entry point
+├── deploy/                 # Docker + K8s deployment manifests
+├── .github/workflows/      # CI/CD pipelines
+├── docs/                   # Architecture + Deployment guides
+├── voice/                  # Voice pipeline (STT, TTS, VAD)
+├── vision/                 # Computer vision (Screen, Camera OCR)
+├── tools/                  # Action tools (Browser, File, System)
+├── tests/                  # Pytest test suite
+├── config.py               # Shared API Keys & config
+└── main.py                 # CLI voice entry point
 └── requirements.txt       # Python dependencies
 ```
 
@@ -213,7 +206,8 @@ All settings in `config.py`:
 <details>
 <summary><b>Dashboard not loading</b></summary>
 
-- Ensure backend is running: `python -m uvicorn server.app:app --port 8080`
+- Ensure database is running: `docker-compose -f deploy/docker/docker-compose.yml up postgres redis -d`
+- Ensure backend is running: `python -m uvicorn server.app.main:app --port 8000`
 - Ensure frontend is running: `cd frontend && npm run dev`
 - Check browser console for errors
 </details>

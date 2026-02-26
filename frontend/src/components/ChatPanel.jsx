@@ -54,7 +54,7 @@ export default function ChatPanel() {
 
     // Fetch models from backend
     useEffect(() => {
-        fetchJSON('/api/models')
+        fetchJSON('/api/v1/models')
             .then(data => {
                 if (data.models && data.models.length > 0) {
                     setAvailableModels(data.models);
@@ -103,7 +103,7 @@ export default function ChatPanel() {
         if (chatId) {
             setLoading(true);
             setHistory(null); // Clear previous history view while loading
-            fetchJSON('/api/history?limit=100')
+            fetchJSON('/api/v1/history?limit=100')
                 .then(data => {
                     const found = (data.conversations || []).find(c => c.id === chatId);
                     if (found) {
@@ -295,7 +295,7 @@ export default function ChatPanel() {
             // Fallback REST
             setLoading(true);
             try {
-                const data = await postJSON('/api/chat', payload);
+                const data = await postJSON('/api/v1/chat', payload);
                 setMessages(prev => [...prev, { role: 'assistant', content: data.response, time: new Date() }]);
             } catch (e) {
                 setMessages(prev => [...prev, { role: 'assistant', content: `Connection error: ${e.message}`, time: new Date() }]);

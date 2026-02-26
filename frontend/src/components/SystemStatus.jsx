@@ -6,8 +6,8 @@ export default function SystemStatus() {
     const [facts, setFacts] = useState({});
 
     useEffect(() => {
-        fetchJSON('/api/status').then(setStatus).catch(() => { });
-        fetchJSON('/api/facts').then(data => setFacts(data.facts || {})).catch(() => { });
+        fetchJSON('/api/v1/status').then(setStatus).catch(() => { });
+        fetchJSON('/api/v1/facts').then(data => setFacts(data.facts || {})).catch(() => { });
     }, []);
 
     if (!status) {

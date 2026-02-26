@@ -1,12 +1,22 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Sidebar({ connected, isCollapsed, toggleCollapse, darkMode, setDarkMode, className = '' }) {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { user, logout } = useAuth();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
 
     const navItems = [
         { id: 'chat', icon: 'chat_bubble_outline', label: 'Chat', path: '/' },
+        { id: 'dashboard', icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },
         { id: 'history', icon: 'history', label: 'History', path: '/history' },
+        { id: 'billing', icon: 'credit_card', label: 'Billing', path: '/subscription' },
         { id: 'trash', icon: 'delete_outline', label: 'Trash', path: '/trash' },
         { id: 'settings', icon: 'settings', label: 'Settings', path: '/settings' },
     ];
@@ -124,28 +134,49 @@ export default function Sidebar({ connected, isCollapsed, toggleCollapse, darkMo
             </div>
 
             {/* User Profile */}
-            <NavLink
-                to="/profile"
-                className={`p-4 border-t border-gray-200 dark:border-slate-800 hover:bg-gray-100 dark:hover:bg-slate-800 transition cursor-pointer flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}
-                title={isCollapsed ? "Sarah Connor" : ""}
-            >
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-orange-100 overflow-hidden flex items-center justify-center shrink-0">
-                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Sarah&backgroundColor=ffe0b2" alt="User Profile" className="w-full h-full object-cover" />
-                    </div>
-                    {!isCollapsed && (
-                        <div>
-                            <div className="font-bold text-sm text-gray-900 dark:text-white leading-tight">Sarah Connor</div>
-                            <div className="text-[13px] text-gray-500 dark:text-slate-400 font-medium">Pro Plan</div>
+            {user ? (
+                <div className={`p-4 border-t border-gray-200 dark:border-slate-800 transition flex flex-col gap-2 ${isCollapsed ? 'items-center' : ''}`}>
+                    <NavLink
+                        to="/profile"
+                        className={`hover:bg-gray-100 dark:hover:bg-slate-800 p-2 -mx-2 rounded-xl transition cursor-pointer flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}
+                        title={isCollapsed ? (user?.full_name || user?.email) : ""}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-emerald-100 overflow-hidden flex items-center justify-center shrink-0">
+                                <span className="text-emerald-700 font-bold">{(user?.full_name || user?.email || 'U')[0].toUpperCase()}</span>
+                            </div>
+                            {!isCollapsed && (
+                                <div className="max-w-[120px]">
+                                    <div className="font-bold text-sm text-gray-900 dark:text-white leading-tight truncate">{user?.full_name || user?.email}</div>
+                                    <div className="text-[13px] text-gray-500 dark:text-slate-400 font-medium capitalize">{user?.plan || 'Free'} Plan</div>
+                                </div>
+                            )}
                         </div>
+                    </NavLink>
+                    {!isCollapsed && (
+                        <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-1.5 mt-1 text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-500/20"
+                        >
+                            <span className="material-icons text-[16px]">logout</span>
+                            Sign Out
+                        </button>
+                    )}
+                    {isCollapsed && (
+                        <button
+                            onClick={handleLogout}
+                            className="w-10 h-10 flex items-center justify-center mt-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors"
+                            title="Sign Out"
+                        >
+                            <span className="material-icons text-[20px]">logout</span>
+                        </button>
                     )}
                 </div>
-                {!isCollapsed && (
-                    <button className="text-gray-400 hover:text-gray-700 dark:hover:text-slate-300 shrink-0">
-                        <span className="material-icons text-xl">settings</span>
-                    </button>
-                )}
-            </NavLink>
+            ) : (
+                <div className="p-4 border-t border-gray-200 dark:border-slate-800">
+                    <NavLink to="/login" className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded flex justify-center text-sm font-medium">Log In</NavLink>
+                </div>
+            )}
         </aside>
     );
 }

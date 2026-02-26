@@ -11,7 +11,7 @@ import json
 import logging
 import time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, HTTPException
-from server.schemas import ChatRequest, ChatResponse, ToolCallRequest, ToolCallResponse, ToolSchema
+from server.legacy_schemas import ChatRequest, ChatResponse, ToolCallRequest, ToolCallResponse, ToolSchema
 
 logger = logging.getLogger(__name__)
 

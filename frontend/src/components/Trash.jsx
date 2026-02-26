@@ -14,7 +14,7 @@ export default function Trash() {
     const loadTrash = async () => {
         setIsLoading(true);
         try {
-            const data = await fetchJSON('/api/trash');
+            const data = await fetchJSON('/api/v1/trash');
             // Backend returns list of items directly or wrapped
             const items = (data.trash || []).map(item => ({
                 id: item.id || Math.random().toString(),
@@ -35,7 +35,7 @@ export default function Trash() {
 
     const handleRestore = async (id) => {
         try {
-            await postJSON(`/api/trash/${id}/restore`, {});
+            await postJSON(`/api/v1/trash/${id}/restore`, {});
             setDeletedItems(prev => prev.filter(item => item.id !== id));
         } catch (error) {
             console.error("Restore failed", error);
@@ -46,7 +46,7 @@ export default function Trash() {
     const handleDeleteForever = async (id) => {
         if (window.confirm("Delete this item permanently? This cannot be undone.")) {
             try {
-                await deleteJSON(`/api/trash/${id}`);
+                await deleteJSON(`/api/v1/trash/${id}`);
                 setDeletedItems(prev => prev.filter(item => item.id !== id));
             } catch (error) {
                 console.error("Delete failed", error);
@@ -60,7 +60,7 @@ export default function Trash() {
 
         if (window.confirm("Are you sure you want to permanently delete all items in the Trash?")) {
             try {
-                await deleteJSON(`/api/trash/empty`);
+                await deleteJSON(`/api/v1/trash/empty`);
                 setDeletedItems([]);
             } catch (error) {
                 console.error("Empty trash failed", error);

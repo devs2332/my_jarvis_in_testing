@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jarvis-ai
+  labels:
+    app: jarvis-ai
+    environment: production
