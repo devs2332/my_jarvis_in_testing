@@ -122,3 +122,5 @@
 .markdown-content pre code {
   @apply bg-transparent p-0 text-slate-300;
 }
+
+.waveform-bar-glow { box-shadow: 0 0 8px rgba(0, 194, 255, 0.6); }

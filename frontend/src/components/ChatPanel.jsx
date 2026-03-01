@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
 import { postJSON, fetchJSON } from '../utils/api';
+import VoiceVisualizer from './VoiceVisualizer';
 
 const FALLBACK_MODELS = [
     { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai', model: 'gpt-4o' },
@@ -27,6 +28,8 @@ export default function ChatPanel() {
     const [loading, setLoading] = useState(false);
     const [streaming, setStreaming] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
+    const [audioLevel, setAudioLevel] = useState(0);
+    const [transcribedText, setTranscribedText] = useState('');
     const [availableModels, setAvailableModels] = useState(FALLBACK_MODELS);
 
     // Feature State
@@ -51,6 +54,7 @@ export default function ChatPanel() {
     const audioContextRef = useRef(null);
     const mediaStreamRef = useRef(null);
     const processorRef = useRef(null);
+    const transcribeTimeoutRef = useRef(null);
 
     // Fetch models from backend
     useEffect(() => {
@@ -179,6 +183,14 @@ export default function ChatPanel() {
                     } else if (data.type === 'user_voice_echo') {
                         // The server transcribed our voice, append it to the chat input box
                         setInput(prev => prev ? prev + ' ' + data.text : data.text);
+                        // Also show it briefly in the visualizer overlay
+                        setTranscribedText(data.text);
+                        if (transcribeTimeoutRef.current) {
+                            clearTimeout(transcribeTimeoutRef.current);
+                        }
+                        transcribeTimeoutRef.current = setTimeout(() => {
+                            setTranscribedText('');
+                        }, 4000); // Hide after 4 seconds
                     } else if (data.type === 'info') {
                         console.log("Server Info:", data.text);
                     } else if (data.type === 'audio') {
@@ -229,10 +241,19 @@ export default function ChatPanel() {
                 processor.onaudioprocess = (e) => {
                     const floatData = e.inputBuffer.getChannelData(0);
                     const intData = new Int16Array(floatData.length);
+                    let sumSquares = 0;
                     for (let i = 0; i < floatData.length; i++) {
                         const s = Math.max(-1, Math.min(1, floatData[i]));
                         intData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                        sumSquares += s * s;
                     }
+
+                    // Calculate RMS (Root Mean Square) for volume level (0.0 to 1.0 roughly)
+                    const rms = Math.sqrt(sumSquares / floatData.length);
+                    // Scale it up a bit so normal speaking registers well (approx maxes at 0.5 for loud speaking)
+                    const scaledLevel = Math.min(1.0, rms * 5);
+                    setAudioLevel(scaledLevel);
+
                     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
                         wsRef.current.send(intData.buffer);
                     }
@@ -266,6 +287,7 @@ export default function ChatPanel() {
             }
 
             setIsRecording(false);
+            setAudioLevel(0);
             wsRef.current.send(JSON.stringify({
                 type: "voice_toggle",
                 active: false
@@ -504,6 +526,12 @@ export default function ChatPanel() {
 
             {/* Input Area */}
             <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-white dark:from-[#0b1217] via-white/95 dark:via-[#0b1217]/95 to-transparent pt-12 pb-6 px-4 md:px-10 lg:px-24 xl:px-48 z-20">
+                <VoiceVisualizer
+                    isActive={isRecording}
+                    audioLevel={audioLevel}
+                    transcribedText={transcribedText}
+                />
+
                 <div className="relative bg-white dark:bg-[#151b26] border border-gray-200 dark:border-slate-700 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08),0_1px_4px_-1px_rgba(0,0,0,0.05)] dark:shadow-black/30 rounded-[2rem] p-2 flex items-center transition-shadow focus-within:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] focus-within:border-gray-300 dark:focus-within:border-slate-600 group">
 
                     {/* Left Action Buttons */}
