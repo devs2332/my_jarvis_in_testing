@@ -72,8 +72,8 @@
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/jarvis-ai.git
-cd jarvis-ai
+git clone https://github.com/devs2332/my_jarvis_in_testing.git
+cd my_jarvis_in_testing
 
 # Python dependencies
 python -m pip install -r requirements.txt
