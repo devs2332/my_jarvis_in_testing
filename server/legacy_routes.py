@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Global set of active chat websocket connections
+active_chat_connections = set()
+
+
 
 # ─── Helpers to access shared state ───
 
@@ -65,8 +69,6 @@ async def get_models():
 
 @router.get("/api/status")
 async def get_status(request: Request):
-    from config import LLM_PROVIDER
-
     vm = _vector_memory(request)
     vm_stats = vm.get_stats() if vm else {}
     
@@ -78,8 +80,14 @@ async def get_status(request: Request):
     except Exception:
         pass
 
+    try:
+        active_provider = request.app.state.agent.llm.default_provider
+    except AttributeError:
+        # Fallback if agent/llm isn't fully initialized yet
+        active_provider = "unknown"
+
     return {
-        "llm_provider": LLM_PROVIDER,
+        "llm_provider": active_provider,
         "vector_memory": vm_stats,
         "tools_count": len(tools_list),
         "tools": tools_list,
@@ -127,13 +135,39 @@ async def chat(req: ChatRequest, request: Request):
 async def ws_chat(websocket: WebSocket):
     await websocket.accept()
     logger.info("🔌 WebSocket client connected (Chat)")
+    active_chat_connections.add(websocket)
 
     app = websocket.app
     agent = app.state.agent
     vm = app.state.vector_memory
     voice = app.state.voice_manager
+    mem = app.state.memory
 
     main_loop = asyncio.get_running_loop()
+
+    # Per-connection state to remember user's selected model/provider for voice
+    ws_state = {
+        "research_mode": False,
+        "fast_mode": False,
+        "search_mode": "none",
+        "language": "English",
+        "provider": None,
+        "model": None
+    }
+
+    # Wire up the memory callback if not already done
+    if not mem.on_change:
+        def broadcast_memory_update():
+            # Send memory_updated to all active connections
+            for conn in list(active_chat_connections):
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        conn.send_json({"type": "memory_updated", "timestamp": time.time()}),
+                        main_loop
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to broadcast to ws: {e}")
+        mem.on_change = broadcast_memory_update
 
     # Voice callback — fires when STT recognizes speech
     def on_speech_recognized(text):
@@ -141,7 +175,7 @@ async def ws_chat(websocket: WebSocket):
             return
         try:
             asyncio.run_coroutine_threadsafe(
-                _process_voice_command(text, websocket, agent, vm, voice),
+                _process_voice_command(text, websocket, agent, vm, voice, ws_state),
                 main_loop,
             )
         except Exception as e:
@@ -165,6 +199,14 @@ async def ws_chat(websocket: WebSocket):
 
             # 1) Voice Toggle
             if msg.get("type") == "voice_toggle":
+                # Update state from frontend toggle message so voice knows the current model
+                ws_state["research_mode"] = msg.get("research_mode", ws_state["research_mode"])
+                ws_state["fast_mode"] = msg.get("fast_mode", ws_state["fast_mode"])
+                ws_state["search_mode"] = msg.get("search_mode", ws_state["search_mode"])
+                ws_state["language"] = msg.get("language", ws_state["language"])
+                ws_state["provider"] = msg.get("provider", ws_state["provider"])
+                ws_state["model"] = msg.get("model", ws_state["model"])
+
                 if msg.get("active"):
                     voice.start(on_speech_recognized_callback=on_speech_recognized, mode="browser")
                     await websocket.send_json({"type": "info", "text": "Microphone armed."})
@@ -186,6 +228,14 @@ async def ws_chat(websocket: WebSocket):
                 await websocket.send_json({"type": "error", "text": "Empty message"})
                 continue
 
+            # Update state for next text/voice commands
+            ws_state["research_mode"] = research_mode
+            ws_state["fast_mode"] = fast_mode
+            ws_state["search_mode"] = search_mode
+            ws_state["language"] = language
+            ws_state["provider"] = provider
+            ws_state["model"] = model
+
             await _process_chat_message(
                 user_message, websocket, agent, vm, voice,
                 research_mode, fast_mode, search_mode, language, provider, model,
@@ -193,16 +243,17 @@ async def ws_chat(websocket: WebSocket):
 
     except WebSocketDisconnect:
         logger.info("🔌 WebSocket client disconnected (Chat)")
+        active_chat_connections.discard(websocket)
         voice.stop()
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
+        active_chat_connections.discard(websocket)
         voice.stop()
 
 
-async def _process_voice_command(text, websocket, agent, vm, voice):
+async def _process_voice_command(text, websocket, agent, vm, voice, ws_state):
     """Callback fired by VoiceManager when STT finishes processing an utterance."""
     await websocket.send_json({"type": "user_voice_echo", "text": text, "timestamp": time.time()})
-    await _process_chat_message(text, websocket, agent, vm, voice, False, False, "none", "English", None, None)
 
 
 async def _process_chat_message(user_message, websocket, agent, vm, voice,
@@ -281,7 +332,7 @@ async def ws_status(websocket: WebSocket):
                 await websocket.send_json({
                     "type": "status_update",
                     "payload": {
-                        "llm_provider": LLM_PROVIDER,
+                        "llm_provider": websocket.app.state.agent.llm.default_provider,
                         "vector_memory": vm_stats,
                         "timestamp": time.time(),
                         "connected": True,
@@ -334,6 +385,15 @@ async def get_history(request: Request, limit: int = 50):
     mem = _memory(request)
     history = mem.get_history(limit=limit)
     return {"conversations": history}
+
+
+@router.get("/api/history/{item_id}")
+async def get_history_item(item_id: str, request: Request):
+    mem = _memory(request)
+    item = mem.get_conversation(item_id)
+    if item:
+        return {"conversation": item}
+    raise HTTPException(status_code=404, detail="Item not found")
 
 
 @router.delete("/api/history/{item_id}")
@@ -400,6 +460,23 @@ async def list_tools(request: Request):
             "parameters": meta["parameters"],
         })
     return {"tools": tools}
+
+@router.post("/api/v1/models/active")
+async def set_active_model(request: Request):
+    """Set the active LLM provider and model for the session."""
+    try:
+        data = await request.json()
+        provider = data.get("provider")
+        model = data.get("model")
+        
+        if not provider:
+            raise HTTPException(status_code=400, detail="Missing 'provider' in request")
+            
+        request.app.state.agent.llm.set_default_provider(provider, model)
+        return {"status": "success", "provider": provider, "model": model}
+    except Exception as e:
+        logger.error(f"Error setting active model: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/api/tools/execute")

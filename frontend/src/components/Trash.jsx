@@ -11,10 +11,37 @@ export default function Trash() {
         loadTrash();
     }, []);
 
+    // Listen for real-time memory updates from the backend WS
+    useEffect(() => {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const token = localStorage.getItem('jarvis_token');
+        const wsUrl = `${protocol}//${window.location.host}/ws/chat${token ? `?token=${token}` : ''}`;
+
+        let ws = new WebSocket(wsUrl);
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'memory_updated') {
+                    console.log('Real-time memory update received, reloading trash...');
+                    loadTrash();
+                }
+            } catch (e) {
+                // Ignore parse errors
+            }
+        };
+
+        return () => {
+            if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+                ws.close();
+            }
+        };
+    }, []);
+
     const loadTrash = async () => {
         setIsLoading(true);
         try {
-            const data = await fetchJSON('/api/v1/trash');
+            const data = await fetchJSON('/api/trash');
             // Backend returns list of items directly or wrapped
             const items = (data.trash || []).map(item => ({
                 id: item.id || Math.random().toString(),
@@ -35,7 +62,7 @@ export default function Trash() {
 
     const handleRestore = async (id) => {
         try {
-            await postJSON(`/api/v1/trash/${id}/restore`, {});
+            await postJSON(`/api/trash/${id}/restore`, {});
             setDeletedItems(prev => prev.filter(item => item.id !== id));
         } catch (error) {
             console.error("Restore failed", error);
@@ -46,7 +73,7 @@ export default function Trash() {
     const handleDeleteForever = async (id) => {
         if (window.confirm("Delete this item permanently? This cannot be undone.")) {
             try {
-                await deleteJSON(`/api/v1/trash/${id}`);
+                await deleteJSON(`/api/trash/${id}`);
                 setDeletedItems(prev => prev.filter(item => item.id !== id));
             } catch (error) {
                 console.error("Delete failed", error);
@@ -60,7 +87,7 @@ export default function Trash() {
 
         if (window.confirm("Are you sure you want to permanently delete all items in the Trash?")) {
             try {
-                await deleteJSON(`/api/v1/trash/empty`);
+                await deleteJSON(`/api/trash/empty`);
                 setDeletedItems([]);
             } catch (error) {
                 console.error("Empty trash failed", error);

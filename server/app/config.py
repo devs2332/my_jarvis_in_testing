@@ -57,9 +57,9 @@ class Settings(BaseSettings):
     STRIPE_PRICE_ENTERPRISE: str = ""
 
     # ── Rate Limiting ────────────────────────────────────
-    RATE_LIMIT_FREE: int = 20        # requests per minute
-    RATE_LIMIT_PRO: int = 60
-    RATE_LIMIT_ENTERPRISE: int = 200
+    RATE_LIMIT_FREE: int = 100        # requests per minute
+    RATE_LIMIT_PRO: int = 250
+    RATE_LIMIT_ENTERPRISE: int = 1000
 
     # ── Token Limits (per billing cycle) ─────────────────
     TOKEN_LIMIT_FREE: int = 100_000

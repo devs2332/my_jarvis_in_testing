@@ -124,7 +124,7 @@ function AppContent() {
 
     const loadHistory = async () => {
         try {
-            const history = await fetchJSON('/api/v1/history');
+            const history = await fetchJSON('/api/history');
             // Transform if necessary, or just set
             // API likely returns list of conversations, for this simple view we might just load current?
             // For now assuming empty or we just start fresh in this view.

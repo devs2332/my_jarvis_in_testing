@@ -60,7 +60,11 @@ export default function ChatPanel() {
                     setAvailableModels(data.models);
                     // Try to keep current selection, or default to Groq-like
                     const groq = data.models.find(m => m.provider === 'groq');
-                    if (groq) setSelectedModel(groq);
+                    if (groq) {
+                        setSelectedModel(groq);
+                        // Also sync this initial default to the backend
+                        selectModel(groq);
+                    }
                 }
             })
             .catch(err => console.warn('Could not fetch models from backend, using fallback:', err));
@@ -103,9 +107,9 @@ export default function ChatPanel() {
         if (chatId) {
             setLoading(true);
             setHistory(null); // Clear previous history view while loading
-            fetchJSON('/api/v1/history?limit=100')
+            fetchJSON('/api/history/' + chatId)
                 .then(data => {
-                    const found = (data.conversations || []).find(c => c.id === chatId);
+                    const found = data.conversation;
                     if (found) {
                         setHistory([
                             { role: 'user', content: found.user, time: new Date(found.timestamp * 1000) },
@@ -115,7 +119,10 @@ export default function ChatPanel() {
                         console.warn("Chat ID not found in recent history:", chatId);
                     }
                 })
-                .catch(err => console.error("Failed to load chat history", err))
+                .catch(err => {
+                    console.error("Failed to load chat history", err);
+                    setHistory(null);
+                })
                 .finally(() => setLoading(false));
         } else {
             setHistory(null);
@@ -170,8 +177,8 @@ export default function ChatPanel() {
                             return [...prev, { role: 'assistant', content: data.text, time: new Date() }];
                         });
                     } else if (data.type === 'user_voice_echo') {
-                        // The server transcribed our voice, add it to the chat as our own message!
-                        setMessages(prev => [...prev, { role: 'user', content: data.text, time: new Date() }]);
+                        // The server transcribed our voice, append it to the chat input box
+                        setInput(prev => prev ? prev + ' ' + data.text : data.text);
                     } else if (data.type === 'info') {
                         console.log("Server Info:", data.text);
                     } else if (data.type === 'audio') {
@@ -234,7 +241,11 @@ export default function ChatPanel() {
                 setIsRecording(true);
                 wsRef.current.send(JSON.stringify({
                     type: "voice_toggle",
-                    active: true
+                    active: true,
+                    provider: selectedModel.provider,
+                    model: selectedModel.model,
+                    search_mode: searchMode,
+                    language: language
                 }));
             } catch (err) {
                 console.error("Error accessing microphone:", err);
@@ -330,9 +341,21 @@ export default function ChatPanel() {
                             {availableModels.map(m => (
                                 <button
                                     key={m.id}
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setSelectedModel(m);
                                         setShowModelMenu(false);
+                                        try {
+                                            await fetchJSON('/api/v1/models/active', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    provider: m.provider,
+                                                    model: m.model
+                                                })
+                                            });
+                                        } catch (error) {
+                                            console.error("Failed to set active model on backend:", error);
+                                        }
                                     }}
                                     className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors
                                         ${selectedModel.id === m.id ? 'text-primary font-medium bg-primary/5' : 'text-gray-700 dark:text-slate-200'}`}

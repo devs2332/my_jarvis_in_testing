@@ -35,11 +35,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # Extract user identity from JWT
         auth_header = request.headers.get("Authorization", "")
+        token = request.query_params.get("token", "")
         user_id = "anonymous"
         plan = "free"
 
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
+
+        if token:
             payload = verify_access_token(token)
             if payload:
                 user_id = payload.get("sub", "anonymous")

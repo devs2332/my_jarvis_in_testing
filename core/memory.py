@@ -3,16 +3,43 @@ import json
 import os
 import time
 import uuid
+import threading
 from collections import deque
 
 class Memory:
     def __init__(self, file="memory.json"):
         self.file = file
         self.data = {}
-        # self.history = deque(maxlen=10)  # Removed legacy deque
+        self.on_change = None  # Callback fired when memory changes
+        self._last_mtime = 0
         self._load()
+        
+        # Start file watcher thread
+        self._watcher_thread = threading.Thread(target=self._watch_file, daemon=True)
+        self._watcher_thread.start()
 
-    def _load(self):
+    def _watch_file(self):
+        """Background thread to watch for external changes to memory.json."""
+        while True:
+            time.sleep(2)
+            if os.path.exists(self.file):
+                try:
+                    current_mtime = os.stat(self.file).st_mtime
+                    if self._last_mtime > 0 and current_mtime > self._last_mtime:
+                        print("🔄 memory.json changed externally, reloading...")
+                        self._load(notify=True)
+                except Exception as e:
+                    pass
+
+    def _notify(self):
+        """Invoke the on_change callback if registered."""
+        if self.on_change:
+            try:
+                self.on_change()
+            except Exception as e:
+                print(f"⚠️ Error in memory on_change callback: {e}")
+
+    def _load(self, notify=False):
         if os.path.exists(self.file):
             try:
                 with open(self.file, "r") as f:
@@ -22,6 +49,7 @@ class Memory:
                     else:
                         print("⚠️ Memory file malformed (not a dict). Resetting.")
                         self.data = {}
+                self._last_mtime = os.stat(self.file).st_mtime
             except Exception as e:
                 print(f"⚠️ Error loading memory: {e}")
                 self.data = {}
@@ -32,10 +60,14 @@ class Memory:
         if "trash" not in self.data:
             self.data["trash"] = []
 
+        if notify:
+            self._notify()
+
     def _save(self):
         try:
             with open(self.file, "w") as f:
                 json.dump(self.data, f, indent=2)
+            self._last_mtime = os.stat(self.file).st_mtime
         except Exception as e:
             print(f"⚠️ Error saving memory: {e}")
 
@@ -43,6 +75,7 @@ class Memory:
     def set(self, key, value):
         self.data[key] = value
         self._save()
+        self._notify()
 
     def get(self, key):
         return self.data.get(key)
@@ -64,6 +97,7 @@ class Memory:
             self.data["history"].pop(0)
             
         self._save()
+        self._notify()
 
     def get_history(self, limit=50):
         # Return reversed (newest first)
@@ -87,6 +121,7 @@ class Memory:
                 # Add to trash
                 self.data["trash"].insert(0, removed_item) # Newest deleted first
                 self._save()
+                self._notify()
                 return True
         return False
 
@@ -104,6 +139,7 @@ class Memory:
                 # Sort history by timestamp to ensure correct order
                 self.data["history"].sort(key=lambda x: x.get("timestamp", 0))
                 self._save()
+                self._notify()
                 return True
         return False
 
@@ -113,12 +149,14 @@ class Memory:
             if item.get("id") == conversation_id:
                 trash.pop(i)
                 self._save()
+                self._notify()
                 return True
         return False
 
     def empty_trash(self):
         self.data["trash"] = []
         self._save()
+        self._notify()
         return True
 
     def get_trash(self):

@@ -25,10 +25,37 @@ export default function HistorySearch() {
         return () => document.removeEventListener('visibilitychange', handleVisibility);
     }, []);
 
+    // Listen for real-time memory updates from the backend WS
+    useEffect(() => {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const token = localStorage.getItem('jarvis_token');
+        const wsUrl = `${protocol}//${window.location.host}/ws/chat${token ? `?token=${token}` : ''}`;
+
+        let ws = new WebSocket(wsUrl);
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'memory_updated') {
+                    console.log('Real-time memory update received, reloading history...');
+                    loadHistory();
+                }
+            } catch (e) {
+                // Ignore parse errors from other WS messages
+            }
+        };
+
+        return () => {
+            if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+                ws.close();
+            }
+        };
+    }, []);
+
     const loadHistory = async () => {
         setIsLoading(true);
         try {
-            const data = await fetchJSON('/api/v1/history?limit=100');
+            const data = await fetchJSON('/api/history?limit=100');
             // Transform data if needed, backend returns list of {user, jarvis, id, timestamp}
             const formatted = (data.conversations || []).map(item => ({
                 id: item.id || Math.random().toString(),
@@ -59,7 +86,7 @@ export default function HistorySearch() {
         e.stopPropagation();
         if (window.confirm("Move this conversation to trash?")) {
             try {
-                await deleteJSON(`/api/v1/history/${id}`);
+                await deleteJSON(`/api/history/${id}`);
                 setHistoryItems(prev => prev.filter(item => item.id !== id));
             } catch (error) {
                 console.error("Delete failed", error);

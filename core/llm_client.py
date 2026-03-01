@@ -9,7 +9,6 @@ Includes error handling, retry logic, and comprehensive logging.
 import os
 import logging
 import time
-from config import LLM_PROVIDER
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -30,13 +29,22 @@ class LLMClient:
         """
         Initialize LLM client with specified provider.
         """
-        self.default_provider = LLM_PROVIDER
+        self.default_provider = "nvidia" # Default until set by frontend
+        self.default_model = None
         self.max_retries = max_retries
         self.clients = {} # Cache for initialized clients
         logger.info(f"Initializing LLM Client. Default provider: {self.default_provider}")
         
         # Pre-initialize the default provider
         self._get_client(self.default_provider)
+
+    def set_default_provider(self, provider: str, model: str = None):
+        """Update the active provider and model at runtime."""
+        self.default_provider = provider
+        self.default_model = model
+        logger.info(f"🔄 Switched LLM default provider to: {provider} ({model})")
+        # Ensure client is initialized
+        self._get_client(provider)
 
     def _get_client(self, provider):
         """Get or initialize a client for the specified provider."""
@@ -113,7 +121,9 @@ class LLMClient:
         
         # Determine model based on provider if not specified
         if not model:
-            if active_provider == "groq": model = "llama-3.1-8b-instant"
+            if active_provider == self.default_provider and self.default_model:
+                model = self.default_model
+            elif active_provider == "groq": model = "llama-3.1-8b-instant"
             elif active_provider == "openai": model = "gpt-4o-mini"
             elif active_provider == "mistral": model = "mistral-large-latest"
             elif active_provider == "google": 
@@ -193,7 +203,9 @@ class LLMClient:
         active_provider = provider or self.default_provider
          # Determine model based on provider if not specified
         if not model:
-            if active_provider == "groq": model = "llama-3.1-8b-instant"
+            if active_provider == self.default_provider and self.default_model:
+                model = self.default_model
+            elif active_provider == "groq": model = "llama-3.1-8b-instant"
             elif active_provider == "openai": model = "gpt-4o-mini"
             elif active_provider == "mistral": model = "mistral-large-latest"
             elif active_provider == "google": 
@@ -299,7 +311,9 @@ class LLMClient:
         active_provider = provider or self.default_provider
 
         if not model:
-            if active_provider == "groq": model = "llama-3.1-8b-instant"
+            if active_provider == self.default_provider and self.default_model:
+                model = self.default_model
+            elif active_provider == "groq": model = "llama-3.1-8b-instant"
             elif active_provider == "openai": model = "gpt-4o-mini"
             elif active_provider == "mistral": model = "mistral-large-latest"
             elif active_provider == "google":
