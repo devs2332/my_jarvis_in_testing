@@ -30,6 +30,8 @@ export default function ChatPanel() {
     const [isRecording, setIsRecording] = useState(false);
     const [audioLevel, setAudioLevel] = useState(0);
     const [transcribedText, setTranscribedText] = useState('');
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [speakingMsgIndex, setSpeakingMsgIndex] = useState(null);
     const [availableModels, setAvailableModels] = useState(FALLBACK_MODELS);
 
     // Feature State
@@ -55,6 +57,27 @@ export default function ChatPanel() {
     const mediaStreamRef = useRef(null);
     const processorRef = useRef(null);
     const transcribeTimeoutRef = useRef(null);
+
+    // Stop speech synthesis when user switches tabs or navigates away
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                setIsSpeaking(false);
+                setSpeakingMsgIndex(null);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Cleanup: cancel speech on unmount (route change / navigation)
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        };
+    }, []);
 
     // Fetch models from backend
     useEffect(() => {
@@ -295,6 +318,57 @@ export default function ChatPanel() {
         }
     };
 
+    // Read Aloud Handler using SpeechSynthesis API
+    const handleReadAloud = (text, msgIndex) => {
+        if (!('speechSynthesis' in window)) {
+            console.warn('SpeechSynthesis is not supported in this browser.');
+            return;
+        }
+
+        // If already speaking this message, stop it
+        if (isSpeaking && speakingMsgIndex === msgIndex) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            setSpeakingMsgIndex(null);
+            return;
+        }
+
+        // Cancel any ongoing speech first
+        window.speechSynthesis.cancel();
+
+        // Strip markdown formatting for cleaner speech
+        const plainText = text
+            .replace(/#{1,6}\s?/g, '')          // headings
+            .replace(/\*\*(.*?)\*\*/g, '$1')    // bold
+            .replace(/\*(.*?)\*/g, '$1')        // italic
+            .replace(/`{1,3}[^`]*`{1,3}/g, '')  // code blocks/inline code
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links
+            .replace(/[-*+]\s/g, '')            // list markers
+            .replace(/\n{2,}/g, '. ')           // paragraph breaks
+            .replace(/\n/g, ' ')                // line breaks
+            .replace(/\|/g, ' ')                // table pipes
+            .trim();
+
+        const utterance = new SpeechSynthesisUtterance(plainText);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        utterance.onstart = () => {
+            setIsSpeaking(true);
+            setSpeakingMsgIndex(msgIndex);
+        };
+        utterance.onend = () => {
+            setIsSpeaking(false);
+            setSpeakingMsgIndex(null);
+        };
+        utterance.onerror = () => {
+            setIsSpeaking(false);
+            setSpeakingMsgIndex(null);
+        };
+
+        window.speechSynthesis.speak(utterance);
+    };
+
     // Send Message Handler
     const sendMessage = useCallback(async (text = input) => {
         const msgText = typeof text === 'string' ? text : input;
@@ -466,6 +540,18 @@ export default function ChatPanel() {
                                     <div className="flex items-center gap-2 mb-1 h-[24px]">
                                         <span className="font-bold text-gray-900 dark:text-white text-sm">Jarvis</span>
                                         <span className="bg-[#f3f4f6] dark:bg-slate-800 text-gray-500 dark:text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-200 dark:border-slate-700">v4.0</span>
+                                        <button
+                                            onClick={() => handleReadAloud(msg.content, index)}
+                                            className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${isSpeaking && speakingMsgIndex === index
+                                                ? 'bg-primary/15 text-primary dark:bg-primary/20 dark:text-primary scale-110'
+                                                : 'text-slate-400 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-500'
+                                                }`}
+                                            title={isSpeaking && speakingMsgIndex === index ? 'Stop reading' : 'Read aloud'}
+                                        >
+                                            <span className="material-icons text-[16px]">
+                                                {isSpeaking && speakingMsgIndex === index ? 'stop_circle' : 'volume_up'}
+                                            </span>
+                                        </button>
                                     </div>
                                 )}
 
