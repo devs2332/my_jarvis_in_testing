@@ -15,7 +15,7 @@ ddgs
 transformers
 speechbrain
 edge-tts
-playsound
+playsound==1.2.2
 websockets
 silero-vad
 torch
