@@ -5,7 +5,6 @@ Provides validation and sanitization for user inputs and system outputs.
 """
 
 import logging
-import os
 import re
 from pathlib import Path
 
@@ -142,5 +141,5 @@ class OutputValidator:
         try:
             json.loads(text)
             return True
-        except:
+        except Exception:
             return False

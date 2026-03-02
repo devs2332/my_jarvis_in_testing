@@ -4,8 +4,7 @@ Chat service — orchestrates AI agent, conversation persistence, and token trac
 
 import uuid
 import logging
-from typing import AsyncGenerator, Optional
-from datetime import datetime, timezone
+from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -13,7 +12,6 @@ from sqlalchemy import select, func
 from server.app.models.conversation import Conversation, Message
 from server.app.models.token_usage import TokenUsage
 from server.app.models.subscription import Subscription
-from server.app.models.user import User
 from server.app.config import get_settings
 
 logger = logging.getLogger(__name__)

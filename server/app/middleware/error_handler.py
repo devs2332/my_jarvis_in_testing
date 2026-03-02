@@ -4,7 +4,6 @@ Catches unhandled exceptions and returns structured error responses.
 """
 
 import logging
-import traceback
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request

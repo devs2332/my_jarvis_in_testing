@@ -11,7 +11,7 @@ import json
 import logging
 import time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, HTTPException
-from server.legacy_schemas import ChatRequest, ChatResponse, ToolCallRequest, ToolCallResponse, ToolSchema
+from server.legacy_schemas import ChatRequest, ToolCallRequest
 
 logger = logging.getLogger(__name__)
 
@@ -325,7 +325,6 @@ async def ws_status(websocket: WebSocket):
             msg = json.loads(data)
 
             if msg.get("type") == "get_status":
-                from config import LLM_PROVIDER
                 vm = websocket.app.state.vector_memory
                 vm_stats = vm.get_stats() if vm else {}
 

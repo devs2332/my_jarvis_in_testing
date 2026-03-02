@@ -3,12 +3,12 @@ LangChain-based AI Agent with OpenAI function calling and streaming.
 """
 
 import logging
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator
 
 from langchain_openai import ChatOpenAI
 from langchain.agents import AgentExecutor, create_openai_functions_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from server.app.config import get_settings
 from server.ai.prompt_guard import sanitize_input

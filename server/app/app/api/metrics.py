@@ -2,7 +2,6 @@
 Prometheus metrics endpoint.
 """
 
-import time
 from fastapi import APIRouter, Response
 
 router = APIRouter(tags=["Metrics"])

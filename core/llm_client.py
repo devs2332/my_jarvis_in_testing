@@ -56,28 +56,32 @@ class LLMClient:
             if provider == "groq":
                 from groq import Groq
                 api_key = os.getenv("GROQ_API_KEY")
-                if not api_key: raise ValueError("GROQ_API_KEY not found")
+                if not api_key:
+                    raise ValueError("GROQ_API_KEY not found")
                 client = Groq(api_key=api_key)
                 logger.info("✅ Groq client initialized")
 
             elif provider == "openai":
                 from openai import OpenAI
                 api_key = os.getenv("OPENAI_API_KEY")
-                if not api_key: raise ValueError("OPENAI_API_KEY not found")
+                if not api_key:
+                    raise ValueError("OPENAI_API_KEY not found")
                 client = OpenAI(api_key=api_key)
                 logger.info("✅ OpenAI client initialized")
 
             elif provider == "mistral":
                 from mistralai import Mistral
                 api_key = os.getenv("MISTRAL_API_KEY")
-                if not api_key: raise ValueError("MISTRAL_API_KEY not found")
+                if not api_key:
+                    raise ValueError("MISTRAL_API_KEY not found")
                 client = Mistral(api_key=api_key)
                 logger.info("✅ Mistral client initialized")
 
             elif provider == "google":
                 import google.generativeai as genai
                 api_key = os.getenv("GOOGLE_API_KEY")
-                if not api_key: raise ValueError("GOOGLE_API_KEY not found")
+                if not api_key:
+                    raise ValueError("GOOGLE_API_KEY not found")
                 genai.configure(api_key=api_key)
                 client = genai
                 logger.info("✅ Google Gemini client initialized")
@@ -85,7 +89,8 @@ class LLMClient:
             elif provider == "openrouter":
                 from openai import OpenAI
                 api_key = os.getenv("OPENROUTER_API_KEY")
-                if not api_key: raise ValueError("OPENROUTER_API_KEY not found")
+                if not api_key:
+                    raise ValueError("OPENROUTER_API_KEY not found")
                 client = OpenAI(
                     base_url="https://openrouter.ai/api/v1",
                     api_key=api_key,
@@ -99,7 +104,8 @@ class LLMClient:
             elif provider == "nvidia":
                 from openai import OpenAI
                 api_key = os.getenv("NVIDIA_API_KEY")
-                if not api_key: raise ValueError("NVIDIA_API_KEY not found")
+                if not api_key:
+                    raise ValueError("NVIDIA_API_KEY not found")
                 client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=api_key)
                 logger.info("✅ NVIDIA client initialized")
 
@@ -123,9 +129,12 @@ class LLMClient:
         if not model:
             if active_provider == self.default_provider and self.default_model:
                 model = self.default_model
-            elif active_provider == "groq": model = "llama-3.1-8b-instant"
-            elif active_provider == "openai": model = "gpt-4o-mini"
-            elif active_provider == "mistral": model = "mistral-large-latest"
+            elif active_provider == "groq": 
+                model = "llama-3.1-8b-instant"
+            elif active_provider == "openai": 
+                model = "gpt-4o-mini"
+            elif active_provider == "mistral": 
+                model = "mistral-large-latest"
             elif active_provider == "google": 
                 from config import MODEL_GOOGLE
                 model = MODEL_GOOGLE
@@ -205,9 +214,12 @@ class LLMClient:
         if not model:
             if active_provider == self.default_provider and self.default_model:
                 model = self.default_model
-            elif active_provider == "groq": model = "llama-3.1-8b-instant"
-            elif active_provider == "openai": model = "gpt-4o-mini"
-            elif active_provider == "mistral": model = "mistral-large-latest"
+            elif active_provider == "groq": 
+                model = "llama-3.1-8b-instant"
+            elif active_provider == "openai": 
+                model = "gpt-4o-mini"
+            elif active_provider == "mistral": 
+                model = "mistral-large-latest"
             elif active_provider == "google": 
                 from config import MODEL_GOOGLE
                 model = MODEL_GOOGLE
@@ -227,7 +239,8 @@ class LLMClient:
                 )
                 for chunk in stream:
                     delta = chunk.choices[0].delta
-                    if delta.content: yield delta.content
+                    if delta.content: 
+                        yield delta.content
 
             elif active_provider == "openai":
                 stream = client.chat.completions.create(
@@ -235,7 +248,8 @@ class LLMClient:
                 )
                 for chunk in stream:
                     delta = chunk.choices[0].delta
-                    if delta.content: yield delta.content
+                    if delta.content: 
+                        yield delta.content
             
             elif active_provider == "openrouter":
                 stream = client.chat.completions.create(
@@ -248,7 +262,8 @@ class LLMClient:
                 )
                 for chunk in stream:
                     delta = chunk.choices[0].delta
-                    if delta.content: yield delta.content
+                    if delta.content: 
+                        yield delta.content
 
             elif active_provider == "nvidia":
                 stream = client.chat.completions.create(
@@ -272,7 +287,8 @@ class LLMClient:
                 model_instance = client.GenerativeModel(model)
                 stream = model_instance.generate_content(prompt, generation_config=generation_config, stream=True)
                 for chunk in stream:
-                    if chunk.text: yield chunk.text
+                    if chunk.text: 
+                        yield chunk.text
 
             elif active_provider == "mistral":
                 stream = client.chat.stream(
@@ -280,7 +296,8 @@ class LLMClient:
                 )
                 for event in stream:
                     delta = event.data.choices[0].delta
-                    if delta.content: yield delta.content
+                    if delta.content: 
+                        yield delta.content
 
             else:
                 yield self.generate(prompt, temperature, provider=active_provider, model=model)
@@ -313,9 +330,12 @@ class LLMClient:
         if not model:
             if active_provider == self.default_provider and self.default_model:
                 model = self.default_model
-            elif active_provider == "groq": model = "llama-3.1-8b-instant"
-            elif active_provider == "openai": model = "gpt-4o-mini"
-            elif active_provider == "mistral": model = "mistral-large-latest"
+            elif active_provider == "groq": 
+                model = "llama-3.1-8b-instant"
+            elif active_provider == "openai": 
+                model = "gpt-4o-mini"
+            elif active_provider == "mistral": 
+                model = "mistral-large-latest"
             elif active_provider == "google":
                 from config import MODEL_GOOGLE
                 model = MODEL_GOOGLE

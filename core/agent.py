@@ -6,7 +6,6 @@ Routes user input through intent detection, planning, and LLM reasoning.
 Supports both synchronous and async streaming responses.
 """
 
-import asyncio
 import logging
 from core.state import StateManager
 from core.memory import Memory

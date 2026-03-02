@@ -44,7 +44,6 @@ class BrowserAutomationTool(BaseTool):
                 await page.goto(url, wait_until="domcontentloaded", timeout=30000)
 
                 if action == "get_content":
-                    content = await page.content()
                     # Extract text content
                     text = await page.evaluate("document.body.innerText")
                     result = text[:5000]  # Limit output size

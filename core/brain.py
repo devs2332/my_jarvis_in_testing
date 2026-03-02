@@ -159,7 +159,6 @@ class Brain:
             
             # Resolve model name for metadata
             if not active_model:
-                from config import LLM_PROVIDER
                 model_map = {
                     "google": "gemini-1.5-flash", "groq": "llama-3.1-8b-instant",
                     "mistral": "mistral-large-latest", "openrouter": "mistralai/mistral-7b-instruct",
@@ -171,7 +170,6 @@ class Brain:
             logger.info(f"✅ Generated answer ({len(answer)} chars)")
 
             # Save to conversation history with full metadata
-            import time as _time
             self.memory.remember({
                 "user": user_query,
                 "jarvis": answer,
@@ -234,7 +232,6 @@ class Brain:
                     }
                     active_model = model_map.get(active_provider, "unknown")
                 
-                import time as _time
                 self.memory.remember({
                     "user": user_query,
                     "jarvis": full_response,

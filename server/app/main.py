@@ -32,6 +32,7 @@ from server.app.api.billing import router as billing_router
 from server.app.api.admin import router as admin_router
 from server.app.api.health import router as health_router
 from server.app.api.metrics import router as metrics_router
+from server.legacy_routes import router as legacy_router
 
 settings = get_settings()
 
@@ -127,7 +128,6 @@ app.include_router(health_router)
 app.include_router(metrics_router)
 
 # Include legacy routes
-from server.legacy_routes import router as legacy_router
 app.include_router(legacy_router)
 
 

@@ -9,7 +9,6 @@ enabling semantic similarity search for context-aware responses.
 import os
 import time
 import logging
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 

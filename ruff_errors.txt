@@ -1,0 +1,24 @@
+F841 Local variable `content` is assigned to but never used
+  --> server\tools\browser_tool.py:47:21
+   |
+46 |                 if action == "get_content":
+47 |                     content = await page.content()
+   |                     ^^^^^^^
+48 |                     # Extract text content
+49 |                     text = await page.evaluate("document.body.innerText")
+   |
+help: Remove assignment to unused variable `content`
+
+F841 Local variable `content` is assigned to but never used
+  --> server\tools\tools\browser_tool.py:47:21
+   |
+46 |                 if action == "get_content":
+47 |                     content = await page.content()
+   |                     ^^^^^^^
+48 |                     # Extract text content
+49 |                     text = await page.evaluate("document.body.innerText")
+   |
+help: Remove assignment to unused variable `content`
+
+Found 2 errors.
+No fixes available (2 hidden fixes can be enabled with the `--unsafe-fixes` option).

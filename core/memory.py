@@ -4,7 +4,6 @@ import os
 import time
 import uuid
 import threading
-from collections import deque
 
 class Memory:
     def __init__(self, file="memory.json"):
@@ -28,7 +27,7 @@ class Memory:
                     if self._last_mtime > 0 and current_mtime > self._last_mtime:
                         print("🔄 memory.json changed externally, reloading...")
                         self._load(notify=True)
-                except Exception as e:
+                except Exception:
                     pass
 
     def _notify(self):

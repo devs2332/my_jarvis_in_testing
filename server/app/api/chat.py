@@ -5,14 +5,13 @@ Chat API endpoints — REST and WebSocket streaming.
 import json
 import uuid
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, status, Request
 
 from server.app.dependencies import DBSession, CurrentUser
 from server.app.schemas.chat import (
     ChatRequest, ChatResponse, ConversationListItem,
-    ConversationDetail, MessageResponse,
+    MessageResponse,
 )
 from server.app.services.chat_service import (
     get_or_create_conversation, save_message, track_token_usage,
@@ -206,7 +205,7 @@ async def websocket_chat(websocket: WebSocket):
                 await db.commit()
 
     except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected")
+        logger.info("WebSocket disconnected")
     except Exception as e:
         logger.error(f"WebSocket error: {e}", exc_info=True)
         try:

@@ -6,7 +6,6 @@ using search results, memory context, chat history, and user queries.
 """
 
 import logging
-import random
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +79,7 @@ class ReasoningEngine:
                 if text:
                     mem_entries.append(f"- {text[:300]}")
             if mem_entries:
-                prompt += f"\nRelevant Past Knowledge:\n"
+                prompt += "\nRelevant Past Knowledge:\n"
                 prompt += "\n".join(mem_entries)
                 prompt += "\n"
 
