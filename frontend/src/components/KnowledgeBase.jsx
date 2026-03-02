@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchJSON } from '../utils/api';
 
-export default function KnowledgeBase() {
+export default function KnowledgeBase({ onMobileMenuOpen }) {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [recent, setRecent] = useState([]);
@@ -34,8 +34,13 @@ export default function KnowledgeBase() {
     return (
         <div className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-8">
             <div className="max-w-4xl mx-auto text-slate-800 dark:text-white">
-                <div className="mb-8 text-center">
-                    <h2 className="text-3xl font-bold mb-2">Knowledge Base</h2>
+                <div className="mb-8 text-center relative flex flex-col items-center">
+                    <div className="w-full flex justify-center items-center mb-2 relative">
+                        <button onClick={onMobileMenuOpen} className="absolute left-0 top-0 md:hidden p-2 -ml-2 text-slate-400 hover:text-white transition-colors">
+                            <span className="material-icons">menu</span>
+                        </button>
+                        <h2 className="text-3xl font-bold text-slate-800 dark:text-white">Knowledge Base</h2>
+                    </div>
                     <p className="text-slate-500">Semantic search across your conversation history and documents</p>
                 </div>
 
@@ -60,14 +65,16 @@ export default function KnowledgeBase() {
                 </div>
 
                 {/* Results Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-12">
                     {displayItems.length === 0 ? (
-                        <div className="col-span-2 text-center py-12">
-                            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                        <div className="col-span-2 text-center py-12 flex flex-col items-center justify-center">
+                            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 text-slate-400">
                                 <span className="material-icons text-3xl">content_paste_search</span>
                             </div>
-                            <h3 className="text-lg font-medium text-slate-900 dark:text-white">{searched ? 'No results found' : 'Knowledge Base Empty'}</h3>
-                            <p className="text-slate-500">{searched ? 'Try a different query' : 'Start chatting to build your knowledge base'}</p>
+                            <h3 className="text-lg font-medium text-slate-800 dark:text-white mb-2">{searched ? 'No results found' : 'Ready to search'}</h3>
+                            <p className="text-sm text-slate-500">
+                                {searched ? 'Try adjusting your search terms.' : 'Enter a query above to search your knowledge base.'}
+                            </p>
                         </div>
                     ) : (
                         displayItems.map((item, i) => (

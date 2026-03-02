@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-export default function Sidebar({ connected, isCollapsed, toggleCollapse, darkMode, setDarkMode, className = '' }) {
+export default function Sidebar({ connected, isCollapsed, toggleCollapse, darkMode, setDarkMode, isMobileMenuOpen, setIsMobileMenuOpen, className = '' }) {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, logout } = useAuth();
@@ -11,6 +11,11 @@ export default function Sidebar({ connected, isCollapsed, toggleCollapse, darkMo
         logout();
         navigate('/login');
     };
+
+    // Close mobile menu on route change
+    useEffect(() => {
+        setIsMobileMenuOpen(false);
+    }, [location.pathname]);
 
     const navItems = [
         { id: 'chat', icon: 'chat_bubble_outline', label: 'Chat', path: '/' },
@@ -26,157 +31,183 @@ export default function Sidebar({ connected, isCollapsed, toggleCollapse, darkMo
     };
 
     return (
-        <aside className={`${isCollapsed ? 'w-20' : 'w-[280px]'} h-full bg-[#f9fafb] dark:bg-[#15232b] border-r border-gray-200 dark:border-slate-800 flex flex-col shrink-0 transition-all duration-300 relative ${className}`}>
-            {/* Header */}
-            <div className={`p-5 flex items-center mb-2 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-                <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white shadow-sm shrink-0">
-                        <span className="material-icons text-[18px]">smart_toy</span>
+        <>
+            {/* Mobile Overlay Backdrop */}
+            {isMobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden transition-opacity"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
+            <aside className={`
+                fixed inset-y-0 left-0 z-50 md:relative
+                ${isCollapsed ? 'w-20' : 'w-[280px]'} 
+                h-full bg-[#f9fafb] dark:bg-[#15232b] border-r border-gray-200 dark:border-slate-800 
+                flex flex-col shrink-0 overflow-hidden transition-all duration-300
+                ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                ${className}
+            `}>
+                {/* Header */}
+                <div className={`p-5 flex items-center mb-2 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+                    <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
+                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white shadow-sm shrink-0">
+                            <span className="material-icons text-[18px]">smart_toy</span>
+                        </div>
+                        {!isCollapsed && <span className="font-bold text-[17px] tracking-tight text-gray-900 dark:text-white">Jarvis</span>}
                     </div>
-                    {!isCollapsed && <span className="font-bold text-[17px] tracking-tight text-gray-900 dark:text-white">Jarvis</span>}
+
+                    {/* Desktop Collapse Button */}
+                    {!isCollapsed && (
+                        <button onClick={toggleCollapse} className="hidden md:flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors ml-auto mr-1" title="Collapse Sidebar">
+                            <span className="material-icons text-xl">close</span>
+                        </button>
+                    )}
+
+                    {/* Mobile Close Button — only rendered when mobile menu is open */}
+                    {isMobileMenuOpen && (
+                        <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors ml-auto mr-1" title="Close Menu">
+                            <span className="material-icons text-xl">close</span>
+                        </button>
+                    )}
                 </div>
-                {!isCollapsed && (
-                    <button onClick={toggleCollapse} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                        <span className="material-icons text-xl">left_panel_close</span>
+
+                {/* Collapse Toggle for collapsed state (Desktop only) */}
+                {isCollapsed && (
+                    <button
+                        onClick={toggleCollapse}
+                        className="hidden md:flex absolute -right-3 top-6 w-6 h-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full items-center justify-center text-slate-500 hover:text-primary transition-colors shadow-sm z-50"
+                    >
+                        <span className="material-icons text-sm">chevron_right</span>
                     </button>
                 )}
-            </div>
 
-            {/* Collapse Toggle for collapsed state */}
-            {isCollapsed && (
-                <button
-                    onClick={toggleCollapse}
-                    className="absolute -right-3 top-6 w-6 h-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full flex items-center justify-center text-slate-500 hover:text-primary transition-colors shadow-sm z-50"
-                >
-                    <span className="material-icons text-sm">chevron_right</span>
-                </button>
-            )}
+                {/* New Chat Button */}
+                <div className="px-5 py-2 mb-2">
+                    <NavLink
+                        to="/"
+                        className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition shadow-[0_2px_4px_rgba(0,0,0,0.02)] font-medium text-[15px] ${isCollapsed ? 'px-0 rounded-xl' : ''}`}
+                        title={isCollapsed ? "New Chat" : ""}
+                    >
+                        <span className="material-icons text-xl">add</span>
+                        {!isCollapsed && "New Chat"}
+                    </NavLink>
+                </div>
 
-            {/* New Chat Button */}
-            <div className="px-5 py-2 mb-2">
-                <NavLink
-                    to="/"
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition shadow-[0_2px_4px_rgba(0,0,0,0.02)] font-medium text-[15px] ${isCollapsed ? 'px-0 rounded-xl' : ''}`}
-                    title={isCollapsed ? "New Chat" : ""}
-                >
-                    <span className="material-icons text-xl">add</span>
-                    {!isCollapsed && "New Chat"}
-                </NavLink>
-            </div>
-
-            {/* Scrollable Navigation List */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-6 mt-2">
-                <div>
-                    {!isCollapsed && <div className="text-[11px] font-bold text-gray-400 dark:text-slate-500 mb-2 px-4 tracking-wider uppercase">Menu</div>}
-                    <div className="space-y-0.5">
-                        {navItems.map(item => (
-                            <NavLink
-                                key={item.id}
-                                to={item.path}
-                                title={isCollapsed ? item.label : ""}
-                                className={({ isActive }) => `
+                {/* Scrollable Navigation List */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-6 mt-2">
+                    <div>
+                        {!isCollapsed && <div className="text-[11px] font-bold text-gray-400 dark:text-slate-500 mb-2 px-4 tracking-wider uppercase">Menu</div>}
+                        <div className="space-y-0.5">
+                            {navItems.map(item => (
+                                <NavLink
+                                    key={item.id}
+                                    to={item.path}
+                                    title={isCollapsed ? item.label : ""}
+                                    className={({ isActive }) => `
                                     flex items-center gap-3 px-4 py-2 rounded-xl transition font-medium
                                     ${isActive
-                                        ? 'bg-white dark:bg-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-black/20 border border-transparent text-gray-900 dark:text-white'
-                                        : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800/60'
-                                    }
+                                            ? 'bg-white dark:bg-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-black/20 border border-transparent text-gray-900 dark:text-white'
+                                            : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800/60'
+                                        }
                                     ${isCollapsed ? 'justify-center px-0' : ''}
                                 `}
-                            >
-                                <span className={`material-icons text-lg ${location.pathname === item.path ? 'text-primary' : 'text-gray-400 dark:text-slate-500'}`}>{item.icon}</span>
-                                {!isCollapsed && <span className="truncate text-sm">{item.label}</span>}
-                            </NavLink>
-                        ))}
+                                >
+                                    <span className={`material-icons text-lg ${location.pathname === item.path ? 'text-primary' : 'text-gray-400 dark:text-slate-500'}`}>{item.icon}</span>
+                                    {!isCollapsed && <span className="truncate text-sm">{item.label}</span>}
+                                </NavLink>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Dark Mode Toggle */}
-            <div className={`px-4 pb-2 ${isCollapsed ? 'flex justify-center' : ''}`}>
-                <button
-                    onClick={handleDarkModeToggle}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all w-full hover:bg-gray-100 dark:hover:bg-slate-800 ${isCollapsed ? 'justify-center' : ''}`}
-                    title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                >
-                    <span className={`material-icons text-lg ${darkMode ? 'text-slate-400' : 'text-amber-500'}`}>
-                        {darkMode ? 'dark_mode' : 'light_mode'}
-                    </span>
-                    {!isCollapsed && (
-                        <div className="flex-1 flex items-center justify-between">
-                            <span className="text-[13px] font-medium text-gray-600 dark:text-slate-300">
-                                {darkMode ? 'Dark Mode' : 'Light Mode'}
-                            </span>
-                            {/* Toggle Switch — ON = dark mode active */}
-                            <div className={`relative inline-flex h-5 w-9 rounded-full transition-colors ${darkMode ? 'bg-primary' : 'bg-gray-200 dark:bg-slate-700'}`}>
-                                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${darkMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                            </div>
-                        </div>
-                    )}
-                </button>
-            </div>
-
-            {/* Status Indicator */}
-            <div className={`px-4 pb-3 ${isCollapsed ? 'flex justify-center' : ''}`}>
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-slate-800 transition-all ${isCollapsed ? 'justify-center' : ''}`}>
-                    <div className="relative flex items-center justify-center w-2.5 h-2.5 shrink-0">
-                        <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${connected ? 'bg-green-400' : 'bg-red-400'}`}></span>
-                        <span className={`relative inline-flex rounded-full w-2 h-2 ${connected ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                    </div>
-                    {!isCollapsed && (
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide leading-none mb-0.5">System</span>
-                            <span className={`text-[12px] font-medium leading-none ${connected ? 'text-gray-700 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-                                {connected ? 'Operational' : 'Connecting...'}
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* User Profile */}
-            {user ? (
-                <div className={`p-4 border-t border-gray-200 dark:border-slate-800 transition flex flex-col gap-2 ${isCollapsed ? 'items-center' : ''}`}>
-                    <NavLink
-                        to="/profile"
-                        className={`hover:bg-gray-100 dark:hover:bg-slate-800 p-2 -mx-2 rounded-xl transition cursor-pointer flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}
-                        title={isCollapsed ? (user?.full_name || user?.email) : ""}
+                {/* Dark Mode Toggle */}
+                <div className={`px-4 pb-2 ${isCollapsed ? 'flex justify-center' : ''}`}>
+                    <button
+                        onClick={handleDarkModeToggle}
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all w-full hover:bg-gray-100 dark:hover:bg-slate-800 ${isCollapsed ? 'justify-center' : ''}`}
+                        title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                     >
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-emerald-100 overflow-hidden flex items-center justify-center shrink-0">
-                                <span className="text-emerald-700 font-bold">{(user?.full_name || user?.email || 'U')[0].toUpperCase()}</span>
-                            </div>
-                            {!isCollapsed && (
-                                <div className="max-w-[120px]">
-                                    <div className="font-bold text-sm text-gray-900 dark:text-white leading-tight truncate">{user?.full_name || user?.email}</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-slate-400 font-medium capitalize">{user?.plan || 'Free'} Plan</div>
+                        <span className={`material-icons text-lg ${darkMode ? 'text-slate-400' : 'text-amber-500'}`}>
+                            {darkMode ? 'dark_mode' : 'light_mode'}
+                        </span>
+                        {!isCollapsed && (
+                            <div className="flex-1 flex items-center justify-between">
+                                <span className="text-[13px] font-medium text-gray-600 dark:text-slate-300">
+                                    {darkMode ? 'Dark Mode' : 'Light Mode'}
+                                </span>
+                                {/* Toggle Switch — ON = dark mode active */}
+                                <div className={`relative inline-flex h-5 w-9 rounded-full transition-colors ${darkMode ? 'bg-primary' : 'bg-gray-200 dark:bg-slate-700'}`}>
+                                    <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${darkMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
                                 </div>
-                            )}
+                            </div>
+                        )}
+                    </button>
+                </div>
+
+                {/* Status Indicator */}
+                <div className={`px-4 pb-3 ${isCollapsed ? 'flex justify-center' : ''}`}>
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-slate-800 transition-all ${isCollapsed ? 'justify-center' : ''}`}>
+                        <div className="relative flex items-center justify-center w-2.5 h-2.5 shrink-0">
+                            <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${connected ? 'bg-green-400' : 'bg-red-400'}`}></span>
+                            <span className={`relative inline-flex rounded-full w-2 h-2 ${connected ? 'bg-green-500' : 'bg-red-500'}`}></span>
                         </div>
-                    </NavLink>
-                    {!isCollapsed && (
-                        <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-1.5 mt-1 text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-500/20"
-                        >
-                            <span className="material-icons text-[16px]">logout</span>
-                            Sign Out
-                        </button>
-                    )}
-                    {isCollapsed && (
-                        <button
-                            onClick={handleLogout}
-                            className="w-10 h-10 flex items-center justify-center mt-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors"
-                            title="Sign Out"
-                        >
-                            <span className="material-icons text-[20px]">logout</span>
-                        </button>
-                    )}
+                        {!isCollapsed && (
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide leading-none mb-0.5">System</span>
+                                <span className={`text-[12px] font-medium leading-none ${connected ? 'text-gray-700 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                                    {connected ? 'Operational' : 'Connecting...'}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            ) : (
-                <div className="p-4 border-t border-gray-200 dark:border-slate-800">
-                    <NavLink to="/login" className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded flex justify-center text-sm font-medium">Log In</NavLink>
-                </div>
-            )}
-        </aside>
+
+                {/* User Profile */}
+                {user ? (
+                    <div className={`p-4 border-t border-gray-200 dark:border-slate-800 transition flex flex-col gap-2 ${isCollapsed ? 'items-center' : ''}`}>
+                        <NavLink
+                            to="/profile"
+                            className={`hover:bg-gray-100 dark:hover:bg-slate-800 p-2 -mx-2 rounded-xl transition cursor-pointer flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}
+                            title={isCollapsed ? (user?.full_name || user?.email) : ""}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-emerald-100 overflow-hidden flex items-center justify-center shrink-0">
+                                    <span className="text-emerald-700 font-bold">{(user?.full_name || user?.email || 'U')[0].toUpperCase()}</span>
+                                </div>
+                                {!isCollapsed && (
+                                    <div className="max-w-[120px]">
+                                        <div className="font-bold text-sm text-gray-900 dark:text-white leading-tight truncate">{user?.full_name || user?.email}</div>
+                                        <div className="text-[13px] text-gray-500 dark:text-slate-400 font-medium capitalize">{user?.plan || 'Free'} Plan</div>
+                                    </div>
+                                )}
+                            </div>
+                        </NavLink>
+                        {!isCollapsed && (
+                            <button
+                                onClick={handleLogout}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-1.5 mt-1 text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-500/20"
+                            >
+                                <span className="material-icons text-[16px]">logout</span>
+                                Sign Out
+                            </button>
+                        )}
+                        {isCollapsed && (
+                            <button
+                                onClick={handleLogout}
+                                className="w-10 h-10 flex items-center justify-center mt-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors"
+                                title="Sign Out"
+                            >
+                                <span className="material-icons text-[20px]">logout</span>
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <div className="p-4 border-t border-gray-200 dark:border-slate-800">
+                        <NavLink to="/login" className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded flex justify-center text-sm font-medium">Log In</NavLink>
+                    </div>
+                )}
+            </aside>
+        </>
     );
 }

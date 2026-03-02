@@ -164,16 +164,22 @@ function AppContent() {
 
     // Sidebar State
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const isAuthRoute = location.pathname === '/login' || location.pathname === '/register';
 
     return (
-        <div className="flex h-screen w-full bg-white dark:bg-[#0b1217] overflow-hidden font-display text-gray-900 dark:text-slate-100 antialiased">
-            <Sidebar
-                connected={connected}
-                isCollapsed={isSidebarCollapsed}
-                toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                darkMode={darkMode}
-                setDarkMode={setDarkMode}
-            />
+        <div className="flex h-[100dvh] w-full bg-white dark:bg-[#0b1217] overflow-hidden font-display text-gray-900 dark:text-slate-100 antialiased">
+            {!isAuthRoute && (
+                <Sidebar
+                    connected={connected}
+                    isCollapsed={isSidebarCollapsed}
+                    toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    darkMode={darkMode}
+                    setDarkMode={setDarkMode}
+                    isMobileMenuOpen={isMobileMenuOpen}
+                    setIsMobileMenuOpen={setIsMobileMenuOpen}
+                />
+            )}
 
             <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0b1217] relative transition-all duration-300">
                 <Routes>
@@ -191,6 +197,7 @@ function AppContent() {
                                 sendMessage={sendMessage}
                                 isTyping={isTyping}
                                 messagesEndRef={messagesEndRef}
+                                onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
                             />
                         </ProtectedRoute>
                     } />
@@ -204,21 +211,22 @@ function AppContent() {
                                 sendMessage={sendMessage}
                                 isTyping={isTyping}
                                 messagesEndRef={messagesEndRef}
+                                onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
                             />
                         </ProtectedRoute>
                     } />
-                    <Route path="/knowledge" element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
-                    <Route path="/status" element={<ProtectedRoute><SystemStatus status={systemStatus} /></ProtectedRoute>} />
+                    <Route path="/knowledge" element={<ProtectedRoute><KnowledgeBase onMobileMenuOpen={() => setIsMobileMenuOpen(true)} /></ProtectedRoute>} />
+                    <Route path="/status" element={<ProtectedRoute><SystemStatus status={systemStatus} onMobileMenuOpen={() => setIsMobileMenuOpen(true)} /></ProtectedRoute>} />
 
                     {/* New Enterprise Routes */}
-                    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                    <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+                    <Route path="/dashboard" element={<ProtectedRoute><Dashboard onMobileMenuOpen={() => setIsMobileMenuOpen(true)} /></ProtectedRoute>} />
+                    <Route path="/subscription" element={<ProtectedRoute><Subscription onMobileMenuOpen={() => setIsMobileMenuOpen(true)} /></ProtectedRoute>} />
 
                     {/* Utilities */}
-                    <Route path="/settings" element={<ProtectedRoute><Settings darkMode={darkMode} setDarkMode={setDarkMode} /></ProtectedRoute>} />
-                    <Route path="/history" element={<ProtectedRoute><HistorySearch /></ProtectedRoute>} />
-                    <Route path="/trash" element={<ProtectedRoute><Trash /></ProtectedRoute>} />
-                    <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                    <Route path="/settings" element={<ProtectedRoute><Settings darkMode={darkMode} setDarkMode={setDarkMode} onMobileMenuOpen={() => setIsMobileMenuOpen(true)} /></ProtectedRoute>} />
+                    <Route path="/history" element={<ProtectedRoute><HistorySearch onMobileMenuOpen={() => setIsMobileMenuOpen(true)} /></ProtectedRoute>} />
+                    <Route path="/trash" element={<ProtectedRoute><Trash onMobileMenuOpen={() => setIsMobileMenuOpen(true)} /></ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute><UserProfile onMobileMenuOpen={() => setIsMobileMenuOpen(true)} /></ProtectedRoute>} />
                 </Routes>
             </main>
         </div>

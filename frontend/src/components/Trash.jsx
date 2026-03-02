@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchJSON, postJSON, deleteJSON } from '../utils/api';
 
-export default function Trash() {
+export default function Trash({ onMobileMenuOpen }) {
     const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
     const [deletedItems, setDeletedItems] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -99,8 +99,11 @@ export default function Trash() {
     return (
         <div className="flex-1 flex flex-col h-[calc(100vh-theme(spacing.16))] relative bg-white dark:bg-[#0b1217] font-display text-slate-900 dark:text-slate-100">
             {/* Header */}
-            <header className="flex items-center justify-between px-8 py-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b1217] z-10 shrink-0">
+            <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between items-start gap-4 px-4 sm:px-8 py-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b1217] z-10 shrink-0">
                 <div className="flex items-center gap-3">
+                    <button onClick={onMobileMenuOpen} className="md:hidden p-2 -ml-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
+                        <span className="material-icons">menu</span>
+                    </button>
                     <div className="p-2 bg-red-50 dark:bg-red-900/10 rounded-lg text-red-500">
                         <span className="material-icons text-2xl">delete_outline</span>
                     </div>
@@ -109,7 +112,7 @@ export default function Trash() {
                         <p className="text-sm text-slate-500 dark:text-slate-400">Manage deleted conversations</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     <div className="flex bg-slate-100 dark:bg-[#151b26] p-1 rounded-lg">
                         <button
                             onClick={() => setViewMode('list')}

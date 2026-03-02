@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { fetchJSON } from '../utils/api';
 import { Link } from 'react-router-dom';
 
-export default function Dashboard() {
+export default function Dashboard({ onMobileMenuOpen }) {
     const { user, loading } = useAuth();
     const [usage, setUsage] = useState({ tokens_used: 0, token_limit: 100000 });
     const [statsLoading, setStatsLoading] = useState(true);
@@ -35,10 +35,15 @@ export default function Dashboard() {
 
     return (
         <div className="flex-1 overflow-y-auto p-8 bg-[#0b1217] text-white">
-            <div className="max-w-4xl mx-auto space-y-8">
-                <div>
-                    <h1 className="text-3xl font-bold font-display">Overview</h1>
-                    <p className="text-gray-400 mt-2">Manage your Jarvis AI Enterprise Platform usage.</p>
+            <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
+                <div className="flex items-center gap-4 mb-8">
+                    <button onClick={onMobileMenuOpen} className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white transition-colors">
+                        <span className="material-icons">menu</span>
+                    </button>
+                    <div>
+                        <h1 className="text-3xl font-bold font-display">Overview</h1>
+                        <p className="text-gray-400 mt-2">Manage your Jarvis AI Enterprise Platform usage.</p>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -87,19 +92,19 @@ export default function Dashboard() {
                 <div className="bg-[#131b22] border border-gray-800 rounded-2xl p-6 shadow-lg">
                     <h2 className="text-lg font-medium text-gray-300 mb-6">Account Details</h2>
                     <div className="space-y-4">
-                        <div className="flex justify-between border-b border-gray-800 pb-4">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 lg:px-2 gap-1 border-b border-gray-800 pb-4">
                             <span className="text-gray-400">UUID</span>
                             <span className="font-mono text-sm text-gray-300">{user?.id || 'sys-default-001'}</span>
                         </div>
-                        <div className="flex justify-between border-b border-gray-800 pb-4">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 lg:px-2 gap-1 border-b border-gray-800 pb-4">
                             <span className="text-gray-400">Email Address</span>
                             <span className="text-gray-300">{user?.email || 'N/A'}</span>
                         </div>
-                        <div className="flex justify-between border-b border-gray-800 pb-4">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 lg:px-2 gap-1 border-b border-gray-800 pb-4">
                             <span className="text-gray-400">Role</span>
                             <span className="text-gray-300 capitalize">{user?.role || 'User'}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 lg:px-2 gap-1">
                             <span className="text-gray-400">Status</span>
                             <span className="text-emerald-400 flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-emerald-400"></span>

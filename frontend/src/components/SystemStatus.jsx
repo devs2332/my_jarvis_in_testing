@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchJSON } from '../utils/api';
 
-export default function SystemStatus() {
+export default function SystemStatus({ onMobileMenuOpen }) {
     const [status, setStatus] = useState(null);
     const [facts, setFacts] = useState({});
 
@@ -40,7 +40,12 @@ export default function SystemStatus() {
     return (
         <div className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-8">
             <div className="max-w-6xl mx-auto">
-                <h2 className="text-3xl font-bold mb-8 text-slate-800 dark:text-white">System Status</h2>
+                <div className="flex items-center gap-4 mb-8">
+                    <button onClick={onMobileMenuOpen} className="md:hidden p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                        <span className="material-icons">menu</span>
+                    </button>
+                    <h2 className="text-3xl font-bold text-slate-800 dark:text-white">System Status</h2>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <StatCard

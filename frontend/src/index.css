@@ -11,13 +11,35 @@
 
 @layer base {
 
+  /* ── Mobile Viewport Height Fix ──
+     100vh is unreliable on mobile due to dynamic browser toolbars.
+     Use 100dvh (dynamic viewport height) with 100vh as fallback. */
   html,
-  body {
+  body,
+  #root {
+    height: 100vh;
+    /* fallback */
+    height: 100dvh;
+    /* dynamic viewport — shrinks when mobile toolbar shows */
+    overflow: hidden;
+    /* prevent any page-level scroll; each panel scrolls internally */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   body {
     @apply font-display text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0b1217] antialiased;
+    /* Prevent horizontal overflow on mobile */
+    overflow-x: hidden;
+    /* Safe area insets for notched phones */
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px);
+  }
+
+  /* Prevent iOS rubber-band bounce and horizontal scroll */
+  * {
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
   }
 }
 
@@ -111,6 +133,11 @@
   @apply bg-slate-50 dark:bg-slate-800/30;
 }
 
+/* Responsive table wrapper for mobile */
+.markdown-content .table-wrapper {
+  @apply overflow-x-auto -mx-2 px-2;
+}
+
 .markdown-content code {
   @apply bg-slate-200 dark:bg-slate-700 px-1 py-0.5 rounded text-sm text-pink-500 dark:text-pink-400 font-mono;
 }
@@ -123,4 +150,6 @@
   @apply bg-transparent p-0 text-slate-300;
 }
 
-.waveform-bar-glow { box-shadow: 0 0 8px rgba(0, 194, 255, 0.6); }
+.waveform-bar-glow {
+  box-shadow: 0 0 8px rgba(0, 194, 255, 0.6);
+}

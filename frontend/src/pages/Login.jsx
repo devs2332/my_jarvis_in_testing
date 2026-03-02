@@ -25,8 +25,15 @@ export default function Login() {
     };
 
     return (
-        <div className="flex h-screen items-center justify-center bg-[#0b1217] text-white">
-            <div className="w-full max-w-md p-8 bg-[#131b22] border border-gray-800 rounded-2xl shadow-2xl">
+        <div className="min-h-screen bg-[#0b1217] flex items-center justify-center font-display relative overflow-hidden px-4">
+
+            {/* Background Effects */}
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px]"></div>
+            </div>
+
+            <div className="w-full max-w-md bg-[#131b22]/80 backdrop-blur-xl border border-gray-800/50 rounded-3xl p-8 sm:p-10 shadow-2xl z-10 relative">
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">Jarvis AI</h1>
                     <p className="text-gray-400 mt-2">Welcome back to the Enterprise Platform</p>
@@ -42,7 +49,7 @@ export default function Login() {
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 bg-[#0b1217] border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-600"
+                            className="w-full px-4 py-3 bg-[#0b1217] text-white border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-600"
                             placeholder="agent@cyber.local"
                         />
                     </div>
@@ -53,7 +60,7 @@ export default function Login() {
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 bg-[#0b1217] border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-600"
+                            className="w-full px-4 py-3 bg-[#0b1217] text-white border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-600"
                             placeholder="••••••••"
                         />
                     </div>

@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 
-export default function UserProfile() {
+export default function UserProfile({ onMobileMenuOpen }) {
     return (
         <div className="flex-1 flex flex-col h-[calc(100vh-theme(spacing.16))] overflow-hidden relative bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display">
             <header className="h-16 flex items-center justify-between px-6 lg:px-10 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-background-dark/80 backdrop-blur-sm z-10 shrink-0">
-                <div>
-                    <h1 className="text-xl font-bold">Account Settings</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage your profile, subscription, and security.</p>
+                <div className="flex items-center gap-3">
+                    <button onClick={onMobileMenuOpen} className="md:hidden p-2 -ml-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
+                        <span className="material-icons">menu</span>
+                    </button>
+                    <div>
+                        <h1 className="text-xl font-bold">Account Settings</h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage your profile, subscription, and security.</p>
+                    </div>
                 </div>
-                <button className="px-4 py-2 bg-white dark:bg-[#1e2936] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm">
+                <button className="px-4 py-2 bg-white dark:bg-[#1e2936] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm hidden sm:block">
                     View Public Profile
                 </button>
             </header>

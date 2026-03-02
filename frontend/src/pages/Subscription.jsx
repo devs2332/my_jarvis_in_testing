@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { postJSON } from '../utils/api';
 
-export default function Subscription() {
+export default function Subscription({ onMobileMenuOpen }) {
     const { user } = useAuth();
     const [loading, setLoading] = useState(false);
 
@@ -40,8 +40,13 @@ export default function Subscription() {
     return (
         <div className="flex-1 overflow-y-auto p-8 bg-[#0b1217] text-white">
             <div className="max-w-5xl mx-auto">
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold font-display mb-4">Upgrade Your Intelligence</h1>
+                <div className="text-center mb-12 relative flex flex-col items-center">
+                    <div className="w-full flex justify-center items-center mb-4 relative">
+                        <button onClick={onMobileMenuOpen} className="absolute left-0 md:hidden p-2 -ml-2 text-slate-400 hover:text-white transition-colors">
+                            <span className="material-icons">menu</span>
+                        </button>
+                        <h1 className="text-4xl font-bold font-display">Upgrade Your Intelligence</h1>
+                    </div>
                     <p className="text-gray-400 text-lg">Choose the plan that fits your execution needs.</p>
                 </div>
 
@@ -65,7 +70,7 @@ export default function Subscription() {
                     </div>
 
                     {/* Pro Tier */}
-                    <div className="bg-[#131b22] border border-blue-500/50 rounded-2xl p-8 flex flex-col items-center relative transform scale-105 shadow-[0_0_30px_rgba(59,130,246,0.15)] shadow-blue-500/20 z-10">
+                    <div className="bg-[#131b22] border border-blue-500/50 rounded-2xl px-4 sm:px-8 py-8 flex flex-col items-center relative transform md:scale-105 shadow-[0_0_30px_rgba(59,130,246,0.15)] shadow-blue-500/20 z-10">
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-full">RECOMMENDED</div>
                         <h2 className="text-xl text-blue-400 font-semibold mb-2">Pro</h2>
                         <div className="text-4xl font-bold mb-6">$20<span className="text-sm font-normal text-gray-500">/mo</span></div>

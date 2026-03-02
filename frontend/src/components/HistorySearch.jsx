@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchJSON, deleteJSON } from '../utils/api';
 
-export default function HistorySearch() {
+export default function HistorySearch({ onMobileMenuOpen }) {
     const navigate = useNavigate();
     const location = useLocation();
     const [searchQuery, setSearchQuery] = useState("");
@@ -112,8 +112,11 @@ export default function HistorySearch() {
     return (
         <div className="flex-1 flex flex-col h-[calc(100vh-theme(spacing.16))] relative bg-white dark:bg-[#0b1217] font-display text-slate-900 dark:text-slate-100">
             {/* Header */}
-            <header className="flex items-center justify-between px-8 py-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b1217] z-10 shrink-0">
+            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between items-start gap-4 px-8 py-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b1217] z-10 shrink-0">
                 <div className="flex items-center gap-3">
+                    <button onClick={onMobileMenuOpen} className="md:hidden p-2 -ml-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
+                        <span className="material-icons">menu</span>
+                    </button>
                     <div className="p-2 bg-indigo-50 dark:bg-indigo-900/10 rounded-lg text-indigo-500">
                         <span className="material-icons text-2xl">history</span>
                     </div>
@@ -122,7 +125,7 @@ export default function HistorySearch() {
                         <p className="text-sm text-slate-500 dark:text-slate-400">View your past conversations</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3 w-full max-w-md">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
                     <div className="relative flex-1 group">
                         <span className="material-icons absolute left-3 top-2.5 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
                         <input
