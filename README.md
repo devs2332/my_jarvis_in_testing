@@ -200,7 +200,7 @@ All settings in `config.py`:
 <summary><b>"Invalid sample rate" error</b></summary>
 
 - System auto-detects microphone sample rate
-- Run `python installer/doctor.py` to check audio devices
+- Run `python backend/installer/doctor.py` to check audio devices
 </details>
 
 <details>
@@ -233,9 +233,10 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Ensure code quality by running the linter (`ruff check backend/`)
+4. Commit changes (`git commit -m 'Add amazing feature'`)
+5. Push to branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
 ## 📄 License
 

@@ -34,7 +34,7 @@ def execute_command(command: str):
     try:
         logger.warning(f"⚠️ Executing system command: {command}")
         result = subprocess.check_output(command, shell=True, text=True, timeout=30)
-        logger.info(f"✅ Command executed successfully")
+        logger.info("✅ Command executed successfully")
         return result.strip()
         
     except subprocess.TimeoutExpired:

@@ -1,0 +1,164 @@
+﻿F401 `sounddevice` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> backend\installer\doctor.py:20:16
+   |
+18 |     print("≡ƒôª Checking core dependencies...")
+19 |     try:
+20 |         import sounddevice
+   |                ^^^^^^^^^^^
+21 |         import groq
+22 |         import faster_whisper
+   |
+help: Remove unused import: `sounddevice`
+
+F401 `groq` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> backend\installer\doctor.py:21:16
+   |
+19 |     try:
+20 |         import sounddevice
+21 |         import groq
+   |                ^^^^
+22 |         import faster_whisper
+23 |         import duckduckgo_search
+   |
+help: Remove unused import: `groq`
+
+F401 `faster_whisper` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> backend\installer\doctor.py:22:16
+   |
+20 |         import sounddevice
+21 |         import groq
+22 |         import faster_whisper
+   |                ^^^^^^^^^^^^^^
+23 |         import duckduckgo_search
+24 |         print("Γ£à Core dependencies found.")
+   |
+help: Remove unused import: `faster_whisper`
+
+F401 `duckduckgo_search` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> backend\installer\doctor.py:23:16
+   |
+21 |         import groq
+22 |         import faster_whisper
+23 |         import duckduckgo_search
+   |                ^^^^^^^^^^^^^^^^^
+24 |         print("Γ£à Core dependencies found.")
+25 |     except ImportError as e:
+   |
+help: Remove unused import: `duckduckgo_search`
+
+E402 Module level import not at top of file
+  --> backend\tests\run_dorking_tests.py:8:1
+   |
+ 6 | sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+ 7 |
+ 8 | from backend.core.google_dorking import QueryDorker
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 9 |
+10 | d = QueryDorker()
+   |
+
+F401 `duckduckgo_search.DDGS` imported but unused; consider using `importlib.util.find_spec` to test for availability
+ --> backend\tests\test_ddgs.py:2:35
+  |
+1 | try:
+2 |     from duckduckgo_search import DDGS
+  |                                   ^^^^
+3 |     print("Import 'from duckduckgo_search import DDGS' successful (Old way)")
+4 | except ImportError:
+  |
+help: Remove unused import: `duckduckgo_search.DDGS`
+
+F401 `ddgs.DDGS` imported but unused; consider using `importlib.util.find_spec` to test for availability
+ --> backend\tests\test_ddgs_v2.py:2:22
+  |
+1 | try:
+2 |     from ddgs import DDGS
+  |                      ^^^^
+3 |     print("Γ£à Success: from ddgs import DDGS")
+4 | except ImportError:
+  |
+help: Remove unused import: `ddgs.DDGS`
+
+E741 Ambiguous variable name: `l`
+ --> backend\tests\test_stt.py:5:5
+  |
+3 | def test_stt():
+4 |     print("Testing STT...")
+5 |     l = Listener()
+  |     ^
+6 |     print("Speak something...")
+7 |     text = l.listen()
+  |
+
+E701 Multiple statements on one line (colon)
+  --> backend\tests\verify_bilingual.py:27:16
+   |
+25 | def is_hindi(text):
+26 |     # Check for Devanagari range
+27 |     if not text: return False
+   |                ^
+28 |     return any("\u0900" <= c <= "\u097F" for c in text)
+   |
+
+F841 Local variable `img_base64` is assigned to but never used
+  --> backend\vision\screen_analysis.py:48:13
+   |
+46 |             buffered = io.BytesIO()
+47 |             image.save(buffered, format="PNG")
+48 |             img_base64 = base64.b64encode(buffered.getvalue()).decode()
+   |             ^^^^^^^^^^
+49 |             
+50 |             # Create vision prompt
+   |
+help: Remove assignment to unused variable `img_base64`
+
+F841 Local variable `prompt` is assigned to but never used
+  --> backend\vision\screen_analysis.py:51:13
+   |
+50 |             # Create vision prompt
+51 |             prompt = f"""
+   |             ^^^^^^
+52 | You are analyzing a screenshot.
+   |
+help: Remove assignment to unused variable `prompt`
+
+E701 Multiple statements on one line (colon)
+   --> backend\voice\stt.py:143:20
+    |
+142 |     def _normalize(self, text):
+143 |         if not text: return ""
+    |                    ^
+144 |         text = text.lower().strip()
+    |
+
+E701 Multiple statements on one line (colon)
+   --> backend\voice\stt_engine.py:114:20
+    |
+113 |     def _normalize(self, text):
+114 |         if not text: return ""
+    |                    ^
+115 |         text = text.lower().strip()
+    |
+
+E722 Do not use bare `except`
+  --> backend\voice\tts_engine.py:96:17
+   |
+94 |                 try:
+95 |                     os.remove(filename)
+96 |                 except:
+   |                 ^^^^^^
+97 |                     pass
+   |
+
+E722 Do not use bare `except`
+   --> backend\voice\tts_engine.py:117:17
+    |
+115 |                 try:
+116 |                     os.remove(filename)
+117 |                 except:
+    |                 ^^^^^^
+118 |                     pass
+    |
+
+Found 15 errors.
+No fixes available (2 hidden fixes can be enabled with the `--unsafe-fixes` option).

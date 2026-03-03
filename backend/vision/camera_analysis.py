@@ -6,7 +6,6 @@ Analyzes live camera feed for real-time visual understanding.
 
 import logging
 import cv2
-import numpy as np
 from PIL import Image
 
 logger = logging.getLogger(__name__)

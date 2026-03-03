@@ -1,5 +1,5 @@
 try:
-    from duckduckgo_search import DDGS
+    from duckduckgo_search import DDGS  # noqa: F401
     print("Import 'from duckduckgo_search import DDGS' successful (Old way)")
 except ImportError:
     print("Import 'from duckduckgo_search import DDGS' failed")

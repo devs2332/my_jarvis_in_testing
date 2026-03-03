@@ -1,9 +1,11 @@
 ﻿"""Quick validation script for QueryDorker — ASCII-only output."""
-import sys, os, logging
+import sys
+import os
+import logging
 logging.disable(logging.CRITICAL)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from backend.core.google_dorking import QueryDorker
+from backend.core.google_dorking import QueryDorker  # noqa: E402
 
 d = QueryDorker()
 ok = 0

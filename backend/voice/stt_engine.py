@@ -111,7 +111,8 @@ class STTEngine:
         return " ".join(seg.text for seg in segments).strip()
 
     def _normalize(self, text):
-        if not text: return ""
+        if not text:
+            return ""
         text = text.lower().strip()
         
         # Remove hallucinations / common whisper failures

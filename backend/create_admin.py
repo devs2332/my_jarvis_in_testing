@@ -7,9 +7,8 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.server.app.database import async_session_factory, Base, engine
-from backend.server.app.models.user import User, UserRole
+from backend.server.app.models.user import UserRole
 from backend.server.app.services.auth_service import register_user
-from backend.server.app.models.user import User
 
 async def create_admin():
     print("Checking database schemas...")

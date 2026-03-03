@@ -6,8 +6,6 @@ Analyzes images from files and provides descriptions, answers questions.
 
 import logging
 from PIL import Image
-import base64
-import io
 import os
 
 logger = logging.getLogger(__name__)

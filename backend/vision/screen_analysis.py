@@ -5,7 +5,6 @@ Analyzes screenshots to understand UI context and provide descriptions.
 """
 
 import logging
-from PIL import Image
 import base64
 import io
 from backend.core.llm_client import LLMClient
@@ -46,10 +45,10 @@ class ScreenAnalyzer:
             # Convert image to base64 for LLM
             buffered = io.BytesIO()
             image.save(buffered, format="PNG")
-            img_base64 = base64.b64encode(buffered.getvalue()).decode()
+            _img_base64 = base64.b64encode(buffered.getvalue()).decode()
             
             # Create vision prompt
-            prompt = f"""
+            _prompt = f"""
 You are analyzing a screenshot.
 
 Question: {question}

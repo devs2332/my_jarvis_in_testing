@@ -2,8 +2,6 @@
 import torch
 import numpy as np
 import logging
-import os
-import urllib.request
 
 logger = logging.getLogger(__name__)
 

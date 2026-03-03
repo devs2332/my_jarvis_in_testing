@@ -1,6 +1,6 @@
 ﻿
 import logging
-from backend.tools.browser import scrape_url, get_search_results
+from backend.tools.browser import scrape_url
 from backend.core.brain import Brain
 from backend.core.memory import Memory
 

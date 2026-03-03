@@ -1,6 +1,5 @@
 import os
 import sys
-import shutil
 
 def check_python():
     print(f"🐍 Python Version: {sys.version.split()[0]}")
@@ -18,10 +17,10 @@ def check_env():
 def check_dependencies():
     print("📦 Checking core dependencies...")
     try:
-        import sounddevice
-        import groq
-        import faster_whisper
-        import duckduckgo_search
+        import sounddevice  # noqa: F401
+        import groq  # noqa: F401
+        import faster_whisper  # noqa: F401
+        import duckduckgo_search  # noqa: F401
         print("✅ Core dependencies found.")
     except ImportError as e:
         print(f"❌ Missing dependency: {e.name}. Run setup.py.")

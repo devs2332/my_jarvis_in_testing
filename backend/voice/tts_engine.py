@@ -93,7 +93,7 @@ class TTSEngine:
             if os.path.exists(filename):
                 try:
                     os.remove(filename)
-                except:
+                except Exception:
                     pass
 
     async def generate_audio_bytes(self, text):
@@ -114,6 +114,6 @@ class TTSEngine:
             if os.path.exists(filename):
                 try:
                     os.remove(filename)
-                except:
+                except Exception:
                     pass
 

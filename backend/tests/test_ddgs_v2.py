@@ -1,5 +1,5 @@
 try:
-    from ddgs import DDGS
+    from ddgs import DDGS  # noqa: F401
     print("✅ Success: from ddgs import DDGS")
 except ImportError:
     print("❌ Failed: from ddgs import DDGS")

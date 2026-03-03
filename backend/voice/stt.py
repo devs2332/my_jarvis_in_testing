@@ -6,7 +6,6 @@ import tempfile
 import scipy.io.wavfile as wav
 import os
 import re
-import time
 from groq import Groq
 from configuration.backend_config.config import STT_ENGINE
 
@@ -141,7 +140,8 @@ class Listener:
         return " ".join(seg.text for seg in segments).strip()
 
     def _normalize(self, text):
-        if not text: return ""
+        if not text:
+            return ""
         text = text.lower().strip()
         
         # Remove hallucinations / common whisper failures

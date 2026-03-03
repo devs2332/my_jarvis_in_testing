@@ -1,5 +1,4 @@
 import requests
-import json
 import time
 
 API_URL = "http://127.0.0.1:8080/api/chat"
@@ -25,7 +24,8 @@ def test_chat(message, language=None):
 
 def is_hindi(text):
     # Check for Devanagari range
-    if not text: return False
+    if not text:
+        return False
     return any("\u0900" <= c <= "\u097F" for c in text)
 
 print("--- Verifying Bilingual Mode ---")

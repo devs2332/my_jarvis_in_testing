@@ -1,6 +1,5 @@
 # jarvis_ai/voice/audio_stream.py
 import sounddevice as sd
-import numpy as np
 import queue
 import logging
 

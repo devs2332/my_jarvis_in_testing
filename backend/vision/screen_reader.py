@@ -8,7 +8,6 @@ import logging
 from PIL import Image
 import mss
 import pytesseract
-import os
 
 logger = logging.getLogger(__name__)
 
