@@ -1,8 +1,0 @@
-test_deep_research_prompt_is_comprehensive (test_mode_prompts.TestModePrompts) ... ok
-test_normal_mode_prompt_is_concise (test_mode_prompts.TestModePrompts) ... ok
-test_web_search_prompt_has_sources (test_mode_prompts.TestModePrompts) ... ok
-
-----------------------------------------------------------------------
-Ran 3 tests in 0.003s
-
-OK

@@ -53,12 +53,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install -r configuration/backend_config/requirements.txt
           pip install ruff pytest pytest-asyncio httpx
 
       - name: Lint with Ruff
         run: |
-          ruff check server/ core/ --output-format=github
+          ruff check backend/ --output-format=github
 
       - name: Run tests
         env:
@@ -67,7 +67,7 @@ jobs:
           JWT_SECRET_KEY: test-secret-key
           ENVIRONMENT: testing
         run: |
-          python -m pytest tests/ -v --tb=short
+          python -m pytest backend/tests/ -v --tb=short
 
   # ── Frontend Build ─────────────────────────────────
   frontend-build:

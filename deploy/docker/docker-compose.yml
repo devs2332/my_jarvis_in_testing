@@ -7,7 +7,7 @@ services:
       context: ../../
       dockerfile: deploy/docker/Dockerfile.backend
     container_name: jarvis-backend
-    env_file: ../../.env
+    env_file: ../../configuration/backend_config/.env
     ports:
       - "8000:8000"
     depends_on:

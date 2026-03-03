@@ -3,7 +3,7 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /build
 
-COPY requirements.txt .
+COPY configuration/backend_config/requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # ── Stage 2: Production ────────────────────────────────
@@ -20,16 +20,14 @@ WORKDIR /app
 # Copy installed dependencies
 COPY --from=builder /install /usr/local
 
-# Copy application code (all modules needed by the unified backend)
-COPY core/ ./core/
-COPY voice/ ./voice/
-COPY vision/ ./vision/
-COPY tools/ ./tools/
-COPY server/ ./server/
-COPY config.py .
+# Copy application code (new reorganized structure)
+COPY backend/ ./backend/
+COPY configuration/ ./configuration/
+COPY database/ ./database/
+COPY main.py .
 
 # Create data directories
-RUN mkdir -p /app/data/chroma && chown -R jarvis:jarvis /app
+RUN mkdir -p /app/database/vector_db && chown -R jarvis:jarvis /app
 
 # Switch to non-root user
 USER jarvis
@@ -40,5 +38,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 EXPOSE 8000
 
-# Run with uvicorn parsing the new server structure
-CMD ["uvicorn", "server.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--loop", "uvloop", "--http", "httptools"]
+# Run with uvicorn using the new module path
+CMD ["uvicorn", "backend.server.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--loop", "uvloop", "--http", "httptools"]
+

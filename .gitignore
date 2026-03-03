@@ -49,11 +49,8 @@ frontend/dist/
 frontend/.vite/
 
 # ===== Data & Runtime =====
-data/memory.json
-data/conversation.log
-data/user_profile.json
-data/vector_db/
-memory.json
+database/memory.json
+database/vector_db/
 
 # ===== Audio / Media =====
 *.mp3
@@ -74,6 +71,7 @@ screenshots/
 
 # ===== ML Models =====
 models/
+pretrained_models/
 *.pth
 *.bin
 *.onnx
@@ -88,3 +86,6 @@ postgres_data/
 redis_data/
 chroma_data/
 
+# ===== Misc =====
+.pytest_cache/
+.ruff_cache/
