@@ -73,6 +73,7 @@ sentence-transformers==3.1.1
 duckduckgo-search==6.2.13
 playwright==1.48.0
 psutil==6.0.0
+beautifulsoup4==4.12.3
 
 # ── Billing ─────────────────────────────────────────────
 stripe==10.12.0
