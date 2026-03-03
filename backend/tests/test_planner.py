@@ -2,6 +2,8 @@
 from backend.core.planner import Planner
 
 def test_planner():
+    import os
+    os.environ["NVIDIA_API_KEY"] = "test-key"
     print("Testing Planner...")
     state = StateManager()
     planner = Planner(state)

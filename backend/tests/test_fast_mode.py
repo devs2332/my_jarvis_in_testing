@@ -11,6 +11,7 @@ from backend.core.agent import Agent
 
 class TestFastMode(unittest.TestCase):
     def setUp(self):
+        os.environ["NVIDIA_API_KEY"] = "test-key"
         self.agent = Agent()
         self.agent.llm = MagicMock()
         self.agent.llm.generate.return_value = "Concise answer."

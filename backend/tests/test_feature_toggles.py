@@ -10,6 +10,7 @@ from backend.core.agent import Agent
 
 class TestFeatureToggles(unittest.TestCase):
     def setUp(self):
+        os.environ["NVIDIA_API_KEY"] = "test-key"
         self.agent = Agent()
         # Mock LLM
         self.agent.llm = MagicMock()
