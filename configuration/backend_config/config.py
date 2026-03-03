@@ -14,6 +14,10 @@ ASSISTANT_NAME = "JARVIS"
 # Options: "google", "groq", "mistral", "openrouter", "openai", "nvidia"
 LLM_PROVIDER = "nvidia"
 
+# Which providers are ACTIVE (have valid API keys / are enabled).
+# Only these will appear in the frontend model selector.
+ACTIVE_PROVIDERS = ["nvidia", "groq", "openrouter"]
+
 # Options: "local" (Faster-Whisper), "speechbrain", "groq" (Cloud)
 STT_ENGINE = "speechbrain"
 
@@ -42,5 +46,4 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 8080
 
-print(f"[DEBUG] Active Provider: {LLM_PROVIDER}")
 

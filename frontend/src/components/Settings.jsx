@@ -4,7 +4,8 @@ import { motion } from 'framer-motion';
 export default function Settings({ darkMode, setDarkMode, onMobileMenuOpen }) {
     const [contextWindow, setContextWindow] = useState(60);
     const [language, setLanguage] = useState('English');
-    const [defaultModel, setDefaultModel] = useState('GPT-4');
+    const [defaultModel, setDefaultModel] = useState('');
+    const [availableModels, setAvailableModels] = useState([]);
     const [apiKey, setApiKey] = useState('sk-........................');
 
     // Toggle states
@@ -16,6 +17,20 @@ export default function Settings({ darkMode, setDarkMode, onMobileMenuOpen }) {
     const [streamResponse, setStreamResponse] = useState(true);
 
     // No local dark mode state — controlled by global App.jsx via props
+
+    // Fetch active models from backend
+    useEffect(() => {
+        fetch('/api/v1/models')
+            .then(r => r.json())
+            .then(data => {
+                if (data.models && data.models.length > 0) {
+                    setAvailableModels(data.models);
+                    setDefaultModel(data.models[0].id);
+                }
+            })
+            .catch(err => console.warn('Could not fetch models:', err));
+    }, []);
+
     return (
         <div className="flex-1 flex flex-col h-[calc(100vh-theme(spacing.16))] overflow-hidden relative bg-white dark:bg-[#0b1217] text-slate-900 dark:text-white font-display">
             {/* Header */}
@@ -152,9 +167,9 @@ export default function Settings({ darkMode, setDarkMode, onMobileMenuOpen }) {
                                     onChange={(e) => setDefaultModel(e.target.value)}
                                     className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-primary cursor-pointer"
                                 >
-                                    <option>GPT-4</option>
-                                    <option>GPT-3.5</option>
-                                    <option>Claude 2</option>
+                                    {availableModels.map(m => (
+                                        <option key={m.id} value={m.id}>{m.name} ({m.provider})</option>
+                                    ))}
                                 </select>
                             </div>
 

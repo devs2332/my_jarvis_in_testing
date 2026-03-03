@@ -46,23 +46,29 @@ async def health():
 
 # ─── Available Models ───
 
-@router.get("/api/models")
-async def get_models():
-    """Return the list of available LLM models for the frontend dropdown."""
+def _build_active_models():
+    """Build the model list, filtered by ACTIVE_PROVIDERS from config."""
     from configuration.backend_config.config import (
         MODEL_GOOGLE, MODEL_GROQ, MODEL_MISTRAL,
         MODEL_OPENROUTER, MODEL_OPENAI, MODEL_NVIDIA,
+        ACTIVE_PROVIDERS,
     )
-    models = [
-        {"id": "gpt-4o", "name": "GPT-4o", "provider": "openai", "model": MODEL_OPENAI.replace("gpt-4o-mini", "gpt-4o")},
-        {"id": "gpt-4o-mini", "name": "GPT-4o Mini", "provider": "openai", "model": MODEL_OPENAI},
-        {"id": "gemini-flash", "name": "Gemini 1.5 Flash", "provider": "google", "model": MODEL_GOOGLE},
-        {"id": "mistral-large", "name": "Mistral Large", "provider": "mistral", "model": MODEL_MISTRAL},
-        {"id": "llama-3-groq", "name": "Llama 3 (Groq)", "provider": "groq", "model": MODEL_GROQ},
-        {"id": "gpt-oss-openrouter", "name": "GPT-OSS 120B (Free)", "provider": "openrouter", "model": MODEL_OPENROUTER},
-        {"id": "gpt-oss-nvidia", "name": "GPT-OSS 120B (NVIDIA)", "provider": "nvidia", "model": MODEL_NVIDIA},
+    all_models = [
+        {"id": "gpt-4o", "name": f"GPT-4o ({MODEL_OPENAI})", "provider": "openai", "model": MODEL_OPENAI},
+        {"id": "gemini-flash", "name": f"Gemini ({MODEL_GOOGLE})", "provider": "google", "model": MODEL_GOOGLE},
+        {"id": "mistral-large", "name": f"Mistral ({MODEL_MISTRAL})", "provider": "mistral", "model": MODEL_MISTRAL},
+        {"id": "llama-3-groq", "name": f"Groq ({MODEL_GROQ})", "provider": "groq", "model": MODEL_GROQ},
+        {"id": "gpt-oss-openrouter", "name": f"OpenRouter ({MODEL_OPENROUTER})", "provider": "openrouter", "model": MODEL_OPENROUTER},
+        {"id": "gpt-oss-nvidia", "name": f"NVIDIA ({MODEL_NVIDIA})", "provider": "nvidia", "model": MODEL_NVIDIA},
     ]
-    return {"models": models}
+    return [m for m in all_models if m["provider"] in ACTIVE_PROVIDERS]
+
+
+@router.get("/api/models")
+@router.get("/api/v1/models")
+async def get_models():
+    """Return active LLM models for the frontend dropdown."""
+    return {"models": _build_active_models()}
 
 
 # ─── Status ───

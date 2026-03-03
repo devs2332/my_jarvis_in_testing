@@ -7,13 +7,7 @@ import { postJSON, fetchJSON } from '../utils/api';
 import InlineWaveform from './InlineWaveform';
 
 const FALLBACK_MODELS = [
-    { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai', model: 'gpt-4o' },
-    { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai', model: 'gpt-4o-mini' },
-    { id: 'gemini-flash', name: 'Gemini 1.5 Flash', provider: 'google', model: 'gemini-1.5-flash' },
-    { id: 'mistral-large', name: 'Mistral Large', provider: 'mistral', model: 'mistral-large-latest' },
-    { id: 'llama-3-groq', name: 'Llama 3 (Groq)', provider: 'groq', model: 'llama-3.1-8b-instant' },
-    { id: 'gpt-oss-openrouter', name: 'GPT-OSS 120B (Free)', provider: 'openrouter', model: 'openai/gpt-oss-120b' },
-    { id: 'gpt-oss-nvidia', name: 'GPT-OSS 120B (NVIDIA)', provider: 'nvidia', model: 'openai/gpt-oss-120b' },
+    { id: 'default', name: 'Loading...', provider: 'none', model: '' },
 ];
 
 export default function ChatPanel({ onMobileMenuOpen }) {
@@ -36,7 +30,7 @@ export default function ChatPanel({ onMobileMenuOpen }) {
     const [availableModels, setAvailableModels] = useState(FALLBACK_MODELS);
 
     // Feature State
-    const [selectedModel, setSelectedModel] = useState(FALLBACK_MODELS[4]); // Default to Groq
+    const [selectedModel, setSelectedModel] = useState(FALLBACK_MODELS[0]);
     const [searchMode, setSearchMode] = useState('none'); // 'none' | 'web_search' | 'deep_research'
     const [language, setLanguage] = useState('English');
 
@@ -86,16 +80,11 @@ export default function ChatPanel({ onMobileMenuOpen }) {
             .then(data => {
                 if (data.models && data.models.length > 0) {
                     setAvailableModels(data.models);
-                    // Try to keep current selection, or default to Groq-like
-                    const groq = data.models.find(m => m.provider === 'groq');
-                    if (groq) {
-                        setSelectedModel(groq);
-                        // Also sync this initial default to the backend
-                        selectModel(groq);
-                    }
+                    // Default to first model from the active list
+                    setSelectedModel(data.models[0]);
                 }
             })
-            .catch(err => console.warn('Could not fetch models from backend, using fallback:', err));
+            .catch(err => console.warn('Could not fetch models from backend:', err));
     }, []);
 
     // Calculate display messages (Local messages OR History)
