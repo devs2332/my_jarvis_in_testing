@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
+    "build": "cd frontend && npm install && npm run build && cd .. && cp -r frontend/dist dist",
     "dev": "cd frontend && npm run dev",
     "install:frontend": "cd frontend && npm install"
   },
