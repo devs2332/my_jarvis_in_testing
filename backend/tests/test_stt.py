@@ -6,9 +6,9 @@ def test_stt():
     print("Testing STT...")
     with patch("backend.voice.stt.sd") as mock_sd, \
          patch("backend.voice.audio_stream.sd") as mock_stream_sd, \
-         patch("backend.installer.doctor.sounddevice") as mock_doctor_sd:
+         patch("backend.voice.stt.sd.query_devices", return_value={"name": "Mock Device", "default_samplerate": 44100}):
         # Mock sounddevice to avoid PortAudioError on CI
-        mock_sd.query_devices.return_value = {"name": "Mock Device"}
+        mock_sd.query_devices.return_value = {"name": "Mock Device", "default_samplerate": 44100}
         
         from backend.voice.stt import Listener
         listener = Listener()

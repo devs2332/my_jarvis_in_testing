@@ -1,0 +1,68 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.10.11, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\ds012\AppData\Local\Programs\Python\Python310\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\ds012\OneDrive\Desktop\jarvis_ai - Copy
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=strict, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 5 items
+
+backend/tests/test_fast_mode.py::TestFastMode::test_fast_mode_brain_logic FAILED [ 20%]
+backend/tests/test_fast_mode.py::TestFastMode::test_fast_mode_trigger PASSED [ 40%]
+backend/tests/test_feature_toggles.py::TestFeatureToggles::test_language_hindi_instruction PASSED [ 60%]
+backend/tests/test_feature_toggles.py::TestFeatureToggles::test_research_mode_triggers_scraping FAILED [ 80%]
+backend/tests/test_stt.py::test_stt FAILED                               [100%]
+
+================================== FAILURES ===================================
+___________________ TestFastMode.test_fast_mode_brain_logic ___________________
+backend\tests\test_fast_mode.py:56: in test_fast_mode_brain_logic
+    mock_scrape.assert_called()
+..\..\..\AppData\Local\Programs\Python\Python310\lib\unittest\mock.py:898: in assert_called
+    raise AssertionError(msg)
+E   AssertionError: Expected 'scrape_url' to have been called.
+------------------------------ Captured log call ------------------------------
+ERROR    backend.core.llm_client:llm_client.py:306 \u274c Streaming error: Error code: 401 - {'status': 401, 'title': 'Unauthorized', 'detail': 'Authentication failed'}
+___________ TestFeatureToggles.test_research_mode_triggers_scraping ___________
+backend\tests\test_feature_toggles.py:47: in test_research_mode_triggers_scraping
+    mock_scrape.assert_called()
+..\..\..\AppData\Local\Programs\Python\Python310\lib\unittest\mock.py:898: in assert_called
+    raise AssertionError(msg)
+E   AssertionError: Expected 'scrape_url' to have been called.
+---------------------------- Captured stdout call -----------------------------
+[STATE] THINKING\n\U0001f504 memory.json changed externally, reloading...\n\U0001f504 memory.json changed externally, reloading...\n[STATE] SPEAKING
+------------------------------ Captured log call ------------------------------
+WARNING  backend.core.llm_client:llm_client.py:200 \u26a0\ufe0f LLM request failed (attempt 1/3): Error code: 401 - {'status': 401, 'title': 'Unauthorized', 'detail': 'Authentication failed'}\nWARNING  backend.core.llm_client:llm_client.py:200 \u26a0\ufe0f LLM request failed (attempt 2/3): Error code: 401 - {'status': 401, 'title': 'Unauthorized', 'detail': 'Authentication failed'}\nWARNING  backend.core.llm_client:llm_client.py:200 \u26a0\ufe0f LLM request failed (attempt 3/3): Error code: 401 - {'status': 401, 'title': 'Unauthorized', 'detail': 'Authentication failed'}
+__________________________________ test_stt ___________________________________
+backend\tests\test_stt.py:14: in test_stt
+    listener = Listener()
+backend\voice\stt.py:59: in __init__
+    self.sample_rate = int(device_info["default_samplerate"])
+E   KeyError: 'default_samplerate'
+---------------------------- Captured stdout call -----------------------------
+Testing STT...\n\U0001f3a7 Initializing Speech Recognition...\n\U0001f3a7 Loading SpeechBrain (might download model on first run)...\n\U0001f504 memory.json changed externally, reloading...\n\U0001f504 memory.json changed externally, reloading...\n\u26a0\ufe0f SpeechBrain Init Failed: [WinError 1314] A required privilege is not held by the client: 'C:\\\\Users\\\\ds012\\\\.cache\\\\huggingface\\\\hub\\\\models--speechbrain--asr-crdnn-rnnlm-librispeech\\\\snapshots\\\\979a53a7a3f6c9291c02c040fd8ebfb2471cf8a3\\\\hyperparams.yaml' -> 'C:\\\\Users\\\\ds012\\\\OneDrive\\\\Desktop\\\\jarvis_ai - Copy\\\\pretrained_models\\\\speechbrain-crdnn-rnnlm-librispeech\\\\hyperparams.yaml'. Falling back to default.\n\U0001f3a7 Loading Local Whisper (Engine: speechbrain)...\n\u26a0\ufe0f Could not auto-detect mic: 'index'. Using fallback index 1.
+------------------------------ Captured log call ------------------------------
+WARNING  speechbrain.utils.torch_audio_backend:torch_audio_backend.py:60 SpeechBrain could not find any working torchaudio backend. Audio files may fail to load. Follow this link for instructions and troubleshooting: https://speechbrain.readthedocs.io/en/latest/audioloading.html
+DEBUG    speechbrain.utils.checkpoints:checkpoints.py:452 Registered checkpoint save hook for _speechbrain_save
+DEBUG    speechbrain.utils.checkpoints:checkpoints.py:455 Registered checkpoint load hook for _speechbrain_load
+DEBUG    speechbrain.utils.checkpoints:checkpoints.py:452 Registered checkpoint save hook for save
+DEBUG    speechbrain.utils.checkpoints:checkpoints.py:455 Registered checkpoint load hook for load
+DEBUG    speechbrain.utils.checkpoints:checkpoints.py:452 Registered checkpoint save hook for _save
+DEBUG    speechbrain.utils.checkpoints:checkpoints.py:455 Registered checkpoint load hook for _recover
+INFO     speechbrain.utils.fetching:fetching.py:370 Fetch hyperparams.yaml: Fetching from HuggingFace Hub 'speechbrain/asr-crdnn-rnnlm-librispeech' if not cached
+DEBUG    speechbrain.utils.fetching:fetching.py:157 Fetch: Local file found, creating symlink 'C:\Users\ds012\.cache\huggingface\hub\models--speechbrain--asr-crdnn-rnnlm-librispeech\snapshots\979a53a7a3f6c9291c02c040fd8ebfb2471cf8a3\hyperparams.yaml' -> 'C:\Users\ds012\OneDrive\Desktop\jarvis_ai - Copy\pretrained_models\speechbrain-crdnn-rnnlm-librispeech\hyperparams.yaml'
+============================== warnings summary ===============================
+backend/tests/test_stt.py::test_stt
+  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+backend/tests/test_stt.py::test_stt
+  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+backend/tests/test_stt.py::test_stt
+  C:\Users\ds012\AppData\Local\Programs\Python\Python310\lib\site-packages\speechbrain\utils\fetching.py:151: UserWarning: Using SYMLINK strategy on Windows for fetching potentially requires elevated privileges and is not recommended. See `LocalStrategy` documentation.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED backend/tests/test_fast_mode.py::TestFastMode::test_fast_mode_brain_logic
+FAILED backend/tests/test_feature_toggles.py::TestFeatureToggles::test_research_mode_triggers_scraping
+FAILED backend/tests/test_stt.py::test_stt - KeyError: 'default_samplerate'
+================== 3 failed, 2 passed, 3 warnings in 10.51s ===================

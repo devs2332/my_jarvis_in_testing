@@ -15,8 +15,13 @@ class TestFastMode(unittest.TestCase):
         self.agent = Agent()
         self.agent.llm = MagicMock()
         self.agent.llm.generate.return_value = "Concise answer."
+        async def mock_stream(*args, **kwargs):
+            yield "Concise "
+            yield "answer."
+        self.agent.llm.generate_stream = mock_stream
         self.agent.brain.search = MagicMock()
         self.agent.brain.search.search.return_value = [{'href': 'http://example.com', 'title': 'Example', 'body': 'Content'}]
+        self.agent.brain.search.search_multiple.return_value = [{'href': 'http://example.com', 'title': 'Example', 'body': 'Content'}]
 
     def test_fast_mode_trigger(self):
         """Test that 'FastMode:' prefix triggers fast mode logic"""
