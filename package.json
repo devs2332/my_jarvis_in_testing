@@ -2,9 +2,14 @@
   "scripts": {
     "build": "cd frontend && npm install && npm run build && cd .. && cp -r frontend/dist dist",
     "dev": "cd frontend && npm run dev",
-    "install:frontend": "cd frontend && npm install"
+    "install:frontend": "cd frontend && npm install",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   },
   "dependencies": {
     "@openrouter/sdk": "^0.8.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.69.0"
   }
 }
