@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "dev": "cd frontend && npm run dev",
+    "install:frontend": "cd frontend && npm install"
+  },
   "dependencies": {
     "@openrouter/sdk": "^0.8.0"
   }

@@ -16,16 +16,16 @@ LLM_PROVIDER = "nvidia"
 
 # Which providers are ACTIVE (have valid API keys / are enabled).
 # Only these will appear in the frontend model selector.
-ACTIVE_PROVIDERS = ["nvidia", "groq", "openrouter"]
+ACTIVE_PROVIDERS = ["nvidia", "groq", "mistral"]
 
 # Options: "local" (Faster-Whisper), "speechbrain", "groq" (Cloud)
 STT_ENGINE = "speechbrain"
 
-MODEL_GOOGLE = "gemini-1.5-flash"
+# MODEL_GOOGLE = "gemini-1.5-flash"
 MODEL_GROQ = "openai/gpt-oss-120b"
 MODEL_MISTRAL = "mistral-large-latest"
-MODEL_OPENROUTER = "openai/gpt-oss-120b"
-MODEL_OPENAI = "gpt-4o-mini"   # fast + cheap
+# MODEL_OPENROUTER = "openai/gpt-oss-120b"
+# MODEL_OPENAI = "gpt-4o-mini"   # fast + cheap
 MODEL_NVIDIA = "openai/gpt-oss-120b"
 
 def get_google_api_key(): return os.getenv("GOOGLE_API_KEY")

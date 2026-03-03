@@ -48,20 +48,36 @@ async def health():
 
 def _build_active_models():
     """Build the model list, filtered by ACTIVE_PROVIDERS from config."""
-    from configuration.backend_config.config import (
-        MODEL_GOOGLE, MODEL_GROQ, MODEL_MISTRAL,
-        MODEL_OPENROUTER, MODEL_OPENAI, MODEL_NVIDIA,
-        ACTIVE_PROVIDERS,
-    )
-    all_models = [
-        {"id": "gpt-4o", "name": f"GPT-4o ({MODEL_OPENAI})", "provider": "openai", "model": MODEL_OPENAI},
-        {"id": "gemini-flash", "name": f"Gemini ({MODEL_GOOGLE})", "provider": "google", "model": MODEL_GOOGLE},
-        {"id": "mistral-large", "name": f"Mistral ({MODEL_MISTRAL})", "provider": "mistral", "model": MODEL_MISTRAL},
-        {"id": "llama-3-groq", "name": f"Groq ({MODEL_GROQ})", "provider": "groq", "model": MODEL_GROQ},
-        {"id": "gpt-oss-openrouter", "name": f"OpenRouter ({MODEL_OPENROUTER})", "provider": "openrouter", "model": MODEL_OPENROUTER},
-        {"id": "gpt-oss-nvidia", "name": f"NVIDIA ({MODEL_NVIDIA})", "provider": "nvidia", "model": MODEL_NVIDIA},
-    ]
-    return [m for m in all_models if m["provider"] in ACTIVE_PROVIDERS]
+    import configuration.backend_config.config as cfg
+    ACTIVE_PROVIDERS = getattr(cfg, "ACTIVE_PROVIDERS", [])
+
+    # Each provider maps to its config variable and display name.
+    # If a MODEL_* constant is commented out / missing, that provider is skipped.
+    provider_map = {
+        "openai":     ("MODEL_OPENAI",     "GPT-4o"),
+        "google":     ("MODEL_GOOGLE",     "Gemini"),
+        "mistral":    ("MODEL_MISTRAL",    "Mistral"),
+        "groq":       ("MODEL_GROQ",       "Groq"),
+        "openrouter": ("MODEL_OPENROUTER", "OpenRouter"),
+        "nvidia":     ("MODEL_NVIDIA",     "NVIDIA"),
+    }
+
+    models = []
+    for provider in ACTIVE_PROVIDERS:
+        entry = provider_map.get(provider)
+        if not entry:
+            continue
+        config_key, display_name = entry
+        model_id = getattr(cfg, config_key, None)
+        if not model_id:
+            continue  # Constant is missing/commented out — skip this provider
+        models.append({
+            "id": f"{provider}-{model_id}",
+            "name": f"{display_name} ({model_id})",
+            "provider": provider,
+            "model": model_id,
+        })
+    return models
 
 
 @router.get("/api/models")
