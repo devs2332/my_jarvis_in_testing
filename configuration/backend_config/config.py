@@ -12,7 +12,7 @@ ASSISTANT_NAME = "JARVIS"
 
 # ===== LLM PROVIDER CONFIG =====
 # Options: "google", "groq", "mistral", "openrouter", "openai", "nvidia"
-LLM_PROVIDER = "nvidia"
+LLM_PROVIDER = "groq"
 
 # Which providers are ACTIVE (have valid API keys / are enabled).
 # Only these will appear in the frontend model selector.
