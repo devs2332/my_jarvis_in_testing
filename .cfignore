@@ -1,8 +1,0 @@
-node_modules/
-frontend/node_modules/
-backend/
-database/
-configuration/
-.venv/
-__pycache__/
-pretrained_models/
