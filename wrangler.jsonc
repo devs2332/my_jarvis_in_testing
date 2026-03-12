@@ -1,0 +1,17 @@
+{
+    "$schema": "./node_modules/wrangler/config-schema.json",
+    "name": "jarvis-ai",
+    "compatibility_date": "2024-03-20",
+    "observability": {
+        "enabled": true
+    },
+    "assets": {
+        "directory": "dist"
+    },
+    "compatibility_flags": [
+        "nodejs_compat"
+    ],
+    "vars": {
+        "BACKEND_URL": "https://your-backend.example.com"
+    }
+}

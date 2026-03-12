@@ -1,0 +1,20 @@
+[
+  {
+    "id": "nvidia-openai/gpt-oss-120b",
+    "name": "NVIDIA (openai/gpt-oss-120b)",
+    "provider": "nvidia",
+    "model": "openai/gpt-oss-120b"
+  },
+  {
+    "id": "groq-openai/gpt-oss-120b",
+    "name": "Groq (openai/gpt-oss-120b)",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b"
+  },
+  {
+    "id": "mistral-mistral-large-latest",
+    "name": "Mistral (mistral-large-latest)",
+    "provider": "mistral",
+    "model": "mistral-large-latest"
+  }
+]

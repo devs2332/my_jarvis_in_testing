@@ -1,0 +1,518 @@
+﻿# jarvis_ai/server/routes.py
+"""
+API Routes — REST + WebSocket endpoints for Jarvis AI.
+
+All shared state (agent, memory, vector_memory, voice_manager) is accessed
+via request.app.state, initialized in app.py lifespan.
+"""
+
+import asyncio
+import json
+import logging
+import time
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, HTTPException
+from backend.server.legacy_schemas import ChatRequest, ToolCallRequest
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+# Global set of active chat websocket connections
+active_chat_connections = set()
+
+
+
+# ─── Helpers to access shared state ───
+
+def _agent(request: Request):
+    return request.app.state.agent
+
+def _vector_memory(request: Request):
+    return request.app.state.vector_memory
+
+def _memory(request: Request):
+    return request.app.state.memory
+
+def _voice_manager(request: Request):
+    return request.app.state.voice_manager
+
+
+# ─── Health ───
+
+@router.get("/api/health")
+async def health():
+    return {"status": "ok", "service": "jarvis-ai", "version": "3.0.0"}
+
+
+# ─── Available Models ───
+
+def _build_active_models():
+    """Build the model list, filtered by ACTIVE_PROVIDERS from config."""
+    import configuration.backend_config.config as cfg
+    ACTIVE_PROVIDERS = getattr(cfg, "ACTIVE_PROVIDERS", [])
+
+    # Each provider maps to its config variable and display name.
+    # If a MODEL_* constant is commented out / missing, that provider is skipped.
+    provider_map = {
+        "openai":     ("MODEL_OPENAI",     "GPT-4o"),
+        "google":     ("MODEL_GOOGLE",     "Gemini"),
+        "mistral":    ("MODEL_MISTRAL",    "Mistral"),
+        "groq":       ("MODEL_GROQ",       "Groq"),
+        "openrouter": ("MODEL_OPENROUTER", "OpenRouter"),
+        "nvidia":     ("MODEL_NVIDIA",     "NVIDIA"),
+    }
+
+    models = []
+    for provider in ACTIVE_PROVIDERS:
+        entry = provider_map.get(provider)
+        if not entry:
+            continue
+        config_key, display_name = entry
+        model_id = getattr(cfg, config_key, None)
+        if not model_id:
+            continue  # Constant is missing/commented out — skip this provider
+        models.append({
+            "id": f"{provider}-{model_id}",
+            "name": f"{display_name} ({model_id})",
+            "provider": provider,
+            "model": model_id,
+        })
+    return models
+
+
+@router.get("/api/models")
+@router.get("/api/v1/models")
+async def get_models():
+    """Return active LLM models for the frontend dropdown."""
+    return {"models": _build_active_models()}
+
+
+# ─── Status ───
+
+@router.get("/api/status")
+async def get_status(request: Request):
+    vm = _vector_memory(request)
+    vm_stats = vm.get_stats() if vm else {}
+    
+    tools_list = []
+    try:
+        agent = _agent(request)
+        if agent and agent.tool_registry:
+            tools_list = agent.tool_registry.list_tools()
+    except Exception:
+        pass
+
+    try:
+        active_provider = request.app.state.agent.llm.default_provider
+    except AttributeError:
+        # Fallback if agent/llm isn't fully initialized yet
+        active_provider = "unknown"
+
+    return {
+        "llm_provider": active_provider,
+        "vector_memory": vm_stats,
+        "tools_count": len(tools_list),
+        "tools": tools_list,
+        "timestamp": time.time(),
+    }
+
+
+# ─── Chat (REST) ───
+
+@router.post("/api/chat")
+async def chat(req: ChatRequest, request: Request):
+    agent = _agent(request)
+    if not agent:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+
+    start = time.time()
+    response = agent.run(
+        req.message,
+        research_mode=req.research_mode,
+        fast_mode=req.fast_mode,
+        search_mode=req.search_mode,
+        language=req.language,
+        provider=req.provider,
+        model=req.model,
+    )
+    elapsed = round(time.time() - start, 2)
+
+    # Store in vector memory (single point of storage)
+    vm = _vector_memory(request)
+    if vm and response:
+        vm.add_conversation(req.message, response)
+
+    return {
+        "message": req.message,
+        "response": response,
+        "research_mode": req.research_mode,
+        "elapsed_seconds": elapsed,
+        "timestamp": time.time(),
+    }
+
+
+# ─── Chat (WebSocket Streaming) ───
+
+@router.websocket("/ws/chat")
+async def ws_chat(websocket: WebSocket):
+    await websocket.accept()
+    logger.info("🔌 WebSocket client connected (Chat)")
+    active_chat_connections.add(websocket)
+
+    app = websocket.app
+    agent = app.state.agent
+    vm = app.state.vector_memory
+    voice = app.state.voice_manager
+    mem = app.state.memory
+
+    main_loop = asyncio.get_running_loop()
+
+    # Per-connection state to remember user's selected model/provider for voice
+    ws_state = {
+        "research_mode": False,
+        "fast_mode": False,
+        "search_mode": "none",
+        "language": "English",
+        "provider": None,
+        "model": None
+    }
+
+    # Wire up the memory callback if not already done
+    if not mem.on_change:
+        def broadcast_memory_update():
+            # Send memory_updated to all active connections
+            for conn in list(active_chat_connections):
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        conn.send_json({"type": "memory_updated", "timestamp": time.time()}),
+                        main_loop
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to broadcast to ws: {e}")
+        mem.on_change = broadcast_memory_update
+
+    # Voice callback — fires when STT recognizes speech
+    def on_speech_recognized(text):
+        if not text:
+            return
+        try:
+            asyncio.run_coroutine_threadsafe(
+                _process_voice_command(text, websocket, agent, vm, voice, ws_state),
+                main_loop,
+            )
+        except Exception as e:
+            logger.error(f"Voice callback err: {e}")
+
+    try:
+        while True:
+            ws_msg = await websocket.receive()
+            
+            # Handle binary audio chunks from browser
+            if "bytes" in ws_msg and ws_msg["bytes"]:
+                if voice.is_listening:
+                    voice.process_browser_chunk(ws_msg["bytes"])
+                continue
+                
+            if "text" not in ws_msg or not ws_msg["text"]:
+                continue
+                
+            data = ws_msg["text"]
+            msg = json.loads(data)
+
+            # 1) Voice Toggle
+            if msg.get("type") == "voice_toggle":
+                # Update state from frontend toggle message so voice knows the current model
+                ws_state["research_mode"] = msg.get("research_mode", ws_state["research_mode"])
+                ws_state["fast_mode"] = msg.get("fast_mode", ws_state["fast_mode"])
+                ws_state["search_mode"] = msg.get("search_mode", ws_state["search_mode"])
+                ws_state["language"] = msg.get("language", ws_state["language"])
+                ws_state["provider"] = msg.get("provider", ws_state["provider"])
+                ws_state["model"] = msg.get("model", ws_state["model"])
+
+                if msg.get("active"):
+                    voice.start(on_speech_recognized_callback=on_speech_recognized, mode="browser")
+                    await websocket.send_json({"type": "info", "text": "Microphone armed."})
+                else:
+                    voice.stop()
+                    await websocket.send_json({"type": "info", "text": "Microphone disarmed."})
+                continue
+
+            # 2) Regular Text Chat
+            user_message = msg.get("message", "")
+            research_mode = msg.get("research_mode", False)
+            fast_mode = msg.get("fast_mode", False)
+            search_mode = msg.get("search_mode", "none")
+            language = msg.get("language", "English")
+            provider = msg.get("provider", None)
+            model = msg.get("model", None)
+
+            if not user_message:
+                await websocket.send_json({"type": "error", "text": "Empty message"})
+                continue
+
+            # Update state for next text/voice commands
+            ws_state["research_mode"] = research_mode
+            ws_state["fast_mode"] = fast_mode
+            ws_state["search_mode"] = search_mode
+            ws_state["language"] = language
+            ws_state["provider"] = provider
+            ws_state["model"] = model
+
+            await _process_chat_message(
+                user_message, websocket, agent, vm, voice,
+                research_mode, fast_mode, search_mode, language, provider, model,
+            )
+
+    except WebSocketDisconnect:
+        logger.info("🔌 WebSocket client disconnected (Chat)")
+        active_chat_connections.discard(websocket)
+        voice.stop()
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        active_chat_connections.discard(websocket)
+        voice.stop()
+
+
+async def _process_voice_command(text, websocket, agent, vm, voice, ws_state):
+    """Callback fired by VoiceManager when STT finishes processing an utterance."""
+    await websocket.send_json({"type": "user_voice_echo", "text": text, "timestamp": time.time()})
+
+
+async def _process_chat_message(user_message, websocket, agent, vm, voice,
+                                research_mode, fast_mode, search_mode, language, provider, model):
+    """Shared core logic for handling an LLM request and streaming back over WS."""
+    await websocket.send_json({"type": "thinking", "text": "Processing..."})
+
+    full_response = ""
+
+    if hasattr(agent, "run_stream"):
+        async for token in agent.run_stream(
+            user_message,
+            research_mode=research_mode,
+            fast_mode=fast_mode,
+            search_mode=search_mode,
+            language=language,
+            provider=provider,
+            model=model,
+        ):
+            full_response += token
+            await websocket.send_json({"type": "token", "text": token})
+    else:
+        full_response = agent.run(
+            user_message,
+            research_mode=research_mode,
+            fast_mode=fast_mode,
+            search_mode=search_mode,
+            language=language,
+            provider=provider,
+            model=model,
+        )
+
+    await websocket.send_json({
+        "type": "complete",
+        "text": full_response,
+        "timestamp": time.time(),
+    })
+
+    # Speak response aloud if voice is active
+    if voice and voice.is_listening:
+        if getattr(voice, "mode", "local") == "browser":
+            if hasattr(voice.tts, "generate_audio_bytes"):
+                audio_bytes = await voice.tts.generate_audio_bytes(full_response)
+                if audio_bytes:
+                    import base64
+                    b64_audio = base64.b64encode(audio_bytes).decode('utf-8')
+                    await websocket.send_json({"type": "audio", "data": b64_audio})
+        else:
+            if hasattr(voice.tts, "speak_async"):
+                await voice.tts.speak_async(full_response)
+            else:
+                voice.speak(full_response)
+
+    # Store in vector memory (single point of storage)
+    if vm:
+        vm.add_conversation(user_message, full_response)
+
+
+# ─── Status WebSocket ───
+
+@router.websocket("/ws")
+async def ws_status(websocket: WebSocket):
+    await websocket.accept()
+    logger.info("🔌 WebSocket client connected (Status)")
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            msg = json.loads(data)
+
+            if msg.get("type") == "get_status":
+                vm = websocket.app.state.vector_memory
+                vm_stats = vm.get_stats() if vm else {}
+
+                await websocket.send_json({
+                    "type": "status_update",
+                    "payload": {
+                        "llm_provider": websocket.app.state.agent.llm.default_provider,
+                        "vector_memory": vm_stats,
+                        "timestamp": time.time(),
+                        "connected": True,
+                    },
+                })
+            else:
+                await websocket.send_json({"type": "pong", "timestamp": time.time()})
+
+    except WebSocketDisconnect:
+        logger.info("🔌 WebSocket client disconnected (Status)")
+    except Exception as e:
+        logger.error(f"Status WebSocket error: {e}")
+
+
+# ─── Memory / Knowledge Base ───
+
+@router.get("/api/memory")
+async def get_memories(request: Request, limit: int = 20):
+    vm = _vector_memory(request)
+    if not vm:
+        return {"memories": [], "total": 0}
+
+    recent = vm.get_recent(n=limit)
+    stats = vm.get_stats()
+    return {"memories": recent, "total": stats["total_documents"]}
+
+
+@router.get("/api/memory/search")
+async def search_memories(request: Request, q: str, top_k: int = 5):
+    vm = _vector_memory(request)
+    if not vm:
+        return {"results": [], "query": q}
+
+    results = vm.search(q, top_k=top_k)
+    return {"results": results, "query": q, "count": len(results)}
+
+
+@router.get("/api/memory/stats")
+async def memory_stats(request: Request):
+    vm = _vector_memory(request)
+    if not vm:
+        raise HTTPException(status_code=503, detail="Vector memory not initialized")
+    return vm.get_stats()
+
+
+# ─── History & Trash (uses shared Memory instance) ───
+
+@router.get("/api/history")
+async def get_history(request: Request, limit: int = 50):
+    mem = _memory(request)
+    history = mem.get_history(limit=limit)
+    return {"conversations": history}
+
+
+@router.get("/api/history/{item_id}")
+async def get_history_item(item_id: str, request: Request):
+    mem = _memory(request)
+    item = mem.get_conversation(item_id)
+    if item:
+        return {"conversation": item}
+    raise HTTPException(status_code=404, detail="Item not found")
+
+
+@router.delete("/api/history/{item_id}")
+async def delete_history_item(item_id: str, request: Request):
+    mem = _memory(request)
+    success = mem.move_to_trash(item_id)
+    if success:
+        return {"status": "success", "message": "Moved to trash"}
+    raise HTTPException(status_code=404, detail="Item not found")
+
+
+@router.get("/api/trash")
+async def get_trash(request: Request):
+    mem = _memory(request)
+    return {"trash": mem.get_trash()}
+
+
+@router.post("/api/trash/{item_id}/restore")
+async def restore_trash_item(item_id: str, request: Request):
+    mem = _memory(request)
+    success = mem.restore_from_trash(item_id)
+    if success:
+        return {"status": "success", "message": "Restored from trash"}
+    raise HTTPException(status_code=404, detail="Item not found in trash")
+
+
+@router.delete("/api/trash/empty")
+async def empty_trash(request: Request):
+    mem = _memory(request)
+    mem.empty_trash()
+    return {"status": "success", "message": "Trash emptied"}
+
+
+@router.delete("/api/trash/{item_id}")
+async def delete_trash_item(item_id: str, request: Request):
+    mem = _memory(request)
+    success = mem.delete_permanently(item_id)
+    if success:
+        return {"status": "success", "message": "Deleted permanently"}
+    raise HTTPException(status_code=404, detail="Item not found in trash")
+
+
+@router.get("/api/facts")
+async def get_facts(request: Request):
+    mem = _memory(request)
+    facts = {k: v for k, v in mem.data.items() if k not in ["history", "trash"]}
+    return {"facts": facts}
+
+
+# ─── Tools ───
+
+@router.get("/api/tools")
+async def list_tools(request: Request):
+    """List all registered tools with their schemas."""
+    agent = _agent(request)
+    if not agent or not agent.tool_registry:
+        return {"tools": []}
+
+    tools = []
+    for name, meta in agent.tool_registry.tools.items():
+        tools.append({
+            "name": name,
+            "description": meta["description"],
+            "parameters": meta["parameters"],
+        })
+    return {"tools": tools}
+
+@router.post("/api/v1/models/active")
+async def set_active_model(request: Request):
+    """Set the active LLM provider and model for the session."""
+    try:
+        data = await request.json()
+        provider = data.get("provider")
+        model = data.get("model")
+        
+        if not provider:
+            raise HTTPException(status_code=400, detail="Missing 'provider' in request")
+            
+        request.app.state.agent.llm.set_default_provider(provider, model)
+        return {"status": "success", "provider": provider, "model": model}
+    except Exception as e:
+        logger.error(f"Error setting active model: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/tools/execute")
+async def execute_tool(req: ToolCallRequest, request: Request):
+    """Execute a registered tool by name with arguments."""
+    agent = _agent(request)
+    if not agent or not agent.tool_registry:
+        raise HTTPException(status_code=503, detail="Tool registry not initialized")
+
+    tool = agent.tool_registry.get_tool(req.tool_name)
+    if not tool:
+        raise HTTPException(status_code=404, detail=f"Tool '{req.tool_name}' not found")
+
+    try:
+        result = agent.tool_registry.execute_tool(req.tool_name, *req.args, **req.kwargs)
+        return {"tool_name": req.tool_name, "result": result, "success": True, "error": None}
+    except Exception as e:
+        return {"tool_name": req.tool_name, "result": None, "success": False, "error": str(e)}
